@@ -114,27 +114,6 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
-      },
-      coordinates: {
-        type: [Number],
-        default: [0, 0], // ✅ MUST ADD THIS
-      },
-    },
-    service_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Service",
-    },
-
-    service_category_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ServiceCategory",
-    },
-
     aadhaar_number: String,
     pan_number: String,
     rc_number: String,
