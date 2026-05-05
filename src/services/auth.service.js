@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
-const User = require('../models/user.model');
-const otpCache = require('../cache/otp.cache');
-const sessionCache = require('../cache/session.cache');
-const { jwt } = require('../utils');
+import bcrypt from 'bcryptjs';
+import User from '../models/user.model.js';
+import otpCache from '../cache/otp.cache.js';
+import sessionCache from '../cache/session.cache.js';
+import {jwt } from '../utils/index.js';
 
 const sendOtp = async (phone, name, password) => {
   // Generate 6-digit OTP
@@ -79,7 +79,7 @@ const login = async (phone, password) => {
   return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
 };
 
-module.exports = {
+export default {
   sendOtp,
   verifyOtp,
   login,

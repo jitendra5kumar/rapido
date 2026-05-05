@@ -1,9 +1,9 @@
-const Redis = require('ioredis');
-const { REDIS_URL } = require('./env');
+import Redis from 'ioredis';
+import {REDIS_URL } from './env.js';
 
 const redis = new Redis(REDIS_URL);
 
 redis.on('connect', () => console.log('Redis connected'));
 redis.on('error', (err) => console.error('Redis error:', err));
 
-module.exports = redis;
+export default redis;

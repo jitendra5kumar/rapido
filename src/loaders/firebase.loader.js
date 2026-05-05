@@ -1,7 +1,7 @@
-const admin = require('../config/firebase');
+import admin from '../config/firebase.js';
 
 const loadFirebase = async () => {
   // Firebase initialization is handled in config
 };
 
-module.exports = loadFirebase;
+export default loadFirebase;

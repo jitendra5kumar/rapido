@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { MONGO_URI } = require('./env');
+import mongoose from 'mongoose';
+import {MONGO_URI } from './env.js';
 
 const connectDB = async () => {
   try {
@@ -11,4 +11,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

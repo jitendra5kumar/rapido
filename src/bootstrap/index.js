@@ -1,13 +1,11 @@
-const expressLoader = require('../loaders/express.loader');
-const mongooseLoader = require('../loaders/mongoose.loader');
-const redisLoader = require('../loaders/redis.loader');
-const firebaseLoader = require('../loaders/firebase.loader');
+import expressLoader from '../loaders/express.loader.js';
+import mongooseLoader from '../loaders/mongoose.loader.js';
+import redisLoader from '../loaders/redis.loader.js';
+import firebaseLoader from '../loaders/firebase.loader.js';
 
-const start = async (app) => {
+export const start = async (app) => {
   await mongooseLoader();
   await redisLoader();
   await firebaseLoader();
   await expressLoader(app);
 };
-
-module.exports = { start };

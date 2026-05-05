@@ -1,6 +1,5 @@
-﻿const admin = require('firebase-admin');
-const {
-  FIREBASE_SERVICE_ACCOUNT,
+import admin from 'firebase-admin';
+import {FIREBASE_SERVICE_ACCOUNT,
   FIREBASE_PROJECT_ID,
   FIREBASE_CLIENT_EMAIL,
   FIREBASE_PRIVATE_KEY,
@@ -10,7 +9,7 @@ const {
   FIREBASE_TOKEN_URI,
   FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
   FIREBASE_CLIENT_X509_CERT_URL,
-} = require('./env');
+} from './env.js';
 
 const firebaseCredentials = (() => {
   if (FIREBASE_SERVICE_ACCOUNT) {
@@ -45,4 +44,4 @@ admin.initializeApp({
   credential: admin.credential.cert(firebaseCredentials),
 });
 
-module.exports = admin;
+export default admin;

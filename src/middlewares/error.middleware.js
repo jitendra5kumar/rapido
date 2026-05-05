@@ -1,6 +1,6 @@
-const { validationResult } = require('express-validator');
+import {validationResult } from 'express-validator';
 
-const errorMiddleware = (err, req, res, next) => {
+export const errorMiddleware = (err, req, res, next) => {
   console.error(err.stack);
   
   // Handle validation errors
@@ -17,12 +17,10 @@ const errorMiddleware = (err, req, res, next) => {
 };
 
 // Middleware to handle validation results
-const handleValidationErrors = (req, res, next) => {
+export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
   }
   next();
 };
-
-module.exports = { errorMiddleware, handleValidationErrors };

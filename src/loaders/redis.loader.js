@@ -1,7 +1,7 @@
-const redis = require('../config/redis');
+import redis from '../config/redis.js';
 
 const loadRedis = async () => {
   // Redis connection is handled in config
 };
 
-module.exports = loadRedis;
+export default loadRedis;

@@ -13,7 +13,7 @@ const error = (res, message, status = 400) => {
   });
 };
 
-module.exports = {
+export default {
   success,
   error,
 };

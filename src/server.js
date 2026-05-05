@@ -1,10 +1,10 @@
-require('dotenv').config();
+import 'dotenv/config';
 
-const http = require('http');
-const app = require('./app');
-const { start } = require('./bootstrap');
-const setupSockets = require('./sockets');
-const { PORT } = require('./config/env');
+import http from 'http';
+import app from './app.js';
+import {start } from './bootstrap/index.js';
+import setupSockets from './sockets/index.js';
+import {PORT } from './config/env.js';
 
 const server = http.createServer(app);
 
@@ -22,4 +22,4 @@ start(app).then(() => {
 });
 
 // Graceful shutdown
-require('./bootstrap/shutdown');
+import './bootstrap/shutdown.js';

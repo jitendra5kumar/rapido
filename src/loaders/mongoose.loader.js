@@ -1,7 +1,7 @@
-const connectDB = require('../config/db');
+import connectDB from '../config/db.js';
 
 const loadMongoose = async () => {
   await connectDB();
 };
 
-module.exports = loadMongoose;
+export default loadMongoose;

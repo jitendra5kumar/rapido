@@ -1,5 +1,5 @@
-const rateLimit = require('express-rate-limit');
-const redis = require('../config/redis');
+import rateLimit from 'express-rate-limit';
+import redis from '../config/redis.js';
 
 const rateLimitMiddleware = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -24,4 +24,4 @@ const rateLimitMiddleware = rateLimit({
   },
 });
 
-module.exports = rateLimitMiddleware;
+export default rateLimitMiddleware;

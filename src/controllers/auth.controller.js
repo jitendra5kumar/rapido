@@ -1,6 +1,6 @@
-const authService = require('../services/auth.service');
-const { asyncHandler } = require('../utils');
-const { response } = require('../utils');
+import authService from '../services/auth.service.js';
+import {asyncHandler } from '../utils/index.js';
+import {response } from '../utils/index.js';
 
 const sendOtp = asyncHandler(async (req, res) => {
   const { phone, name, password } = req.body;
@@ -20,7 +20,7 @@ const login = asyncHandler(async (req, res) => {
   response.success(res, 'Login successful', result);
 });
 
-module.exports = {
+export default {
   sendOtp,
   verifyOtp,
   login,

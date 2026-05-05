@@ -1,4 +1,4 @@
-const redis = require('./redisClient');
+import redis from './redisClient.js';
 
 const setSession = async (userId, token) => {
   await redis.set(`session:${userId}`, token, 'EX', 3600); // 1 hour TTL
@@ -12,7 +12,7 @@ const deleteSession = async (userId) => {
   await redis.del(`session:${userId}`);
 };
 
-module.exports = {
+export default {
   setSession,
   getSession,
   deleteSession,

@@ -1,4 +1,4 @@
-const User = require('../models/user.model');
+import User from '../models/user.model.js';
 
 const getProfile = async (userId) => {
   const user = await User.findById(userId).lean();
@@ -15,6 +15,6 @@ const getProfile = async (userId) => {
   };
 };
 
-module.exports = {
+export default {
   getProfile,
 };

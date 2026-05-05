@@ -1,4 +1,4 @@
-const ioLoader = require('../config/socket');
+import ioLoader from '../config/socket.js';
 
 const setupSockets = (server) => {
   const io = ioLoader(server);
@@ -26,4 +26,4 @@ const setupSockets = (server) => {
   return io;
 };
 
-module.exports = setupSockets;
+export default setupSockets;

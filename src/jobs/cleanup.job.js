@@ -1,5 +1,5 @@
-const sessionCache = require('../cache/session.cache');
-const otpCache = require('../cache/otp.cache');
+import sessionCache from '../cache/session.cache.js';
+import otpCache from '../cache/otp.cache.js';
 
 // Cleanup job to remove expired keys (Redis TTL handles most, but this is for manual cleanup if needed)
 const cleanupExpiredKeys = async () => {
@@ -13,4 +13,4 @@ const cleanupExpiredKeys = async () => {
 
 setInterval(cleanupExpiredKeys, 3600000); // Run every hour
 
-module.exports = cleanupExpiredKeys;
+export default cleanupExpiredKeys;

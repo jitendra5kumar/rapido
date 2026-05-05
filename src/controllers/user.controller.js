@@ -1,6 +1,6 @@
-const userService = require('../services/user.service');
-const { asyncHandler } = require('../utils');
-const { response } = require('../utils');
+import userService from '../services/user.service.js';
+import {asyncHandler } from '../utils/index.js';
+import {response } from '../utils/index.js';
 
 const getProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -8,6 +8,6 @@ const getProfile = asyncHandler(async (req, res) => {
   response.success(res, 'Profile fetched successfully', user);
 });
 
-module.exports = {
+export default {
   getProfile,
 };

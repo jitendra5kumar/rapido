@@ -1,8 +1,8 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const routes = require('../routes');
-const { errorMiddleware } = require('../middlewares');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import routes from '../routes/index.js';
+import {errorMiddleware } from '../middlewares/index.js';
 
 const loadExpress = async (app) => {
   app.use(helmet());
@@ -15,4 +15,4 @@ const loadExpress = async (app) => {
   app.use(errorMiddleware);
 };
 
-module.exports = loadExpress;
+export default loadExpress;

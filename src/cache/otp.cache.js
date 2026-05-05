@@ -1,4 +1,4 @@
-const redis = require('./redisClient');
+import redis from './redisClient.js';
 
 const setOtp = async (phone, otp) => {
   await redis.set(`otp:${phone}`, otp, 'EX', 300); // 5 minutes TTL
@@ -25,7 +25,7 @@ const deleteData = async (phone) => {
   await redis.del(`otp:${phone}:data`);
 };
 
-module.exports = {
+export default {
   setOtp,
   getOtp,
   deleteOtp,

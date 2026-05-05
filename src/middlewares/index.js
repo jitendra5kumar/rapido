@@ -1,10 +1,3 @@
-const authMiddleware = require('./auth.middleware');
-const { errorMiddleware, handleValidationErrors } = require('./error.middleware');
-const rateLimitMiddleware = require('./rateLimit.middleware');
-
-module.exports = {
-  authMiddleware,
-  errorMiddleware,
-  handleValidationErrors,
-  rateLimitMiddleware,
-};
+export { default as authMiddleware } from './auth.middleware.js';
+export { errorMiddleware, handleValidationErrors } from './error.middleware.js';
+export { default as rateLimitMiddleware } from './rateLimit.middleware.js';

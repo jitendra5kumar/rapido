@@ -1,5 +1,5 @@
-const { jwt } = require('../utils');
-const sessionCache = require('../cache/session.cache');
+import {jwt } from '../utils/index.js';
+import sessionCache from '../cache/session.cache.js';
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.header('Authorization');
@@ -25,4 +25,4 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-module.exports = authMiddleware;
+export default authMiddleware;
