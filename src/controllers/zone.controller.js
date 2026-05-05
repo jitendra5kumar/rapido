@@ -3,14 +3,13 @@ import { asyncHandler } from '../utils/index.js';
 import { response } from '../utils/index.js';
 
 export const createZone = asyncHandler(async (req, res) => {
-  const { name, city, coordinates, radiusInKm, status } = req.body;
+  const { name, city, location, status } = req.body;
   const userId = req.user.id; // Assuming user is attached to request via auth middleware
 
   const zone = await zoneService.createZone(userId, {
     name,
     city,
-    coordinates,
-    radiusInKm,
+    location,
     status,
   });
 
@@ -19,14 +18,13 @@ export const createZone = asyncHandler(async (req, res) => {
 
 export const updateZone = asyncHandler(async (req, res) => {
   const { zoneId } = req.params;
-  const { name, city, coordinates, radiusInKm, status } = req.body;
+  const { name, city, location, status } = req.body;
   const userId = req.user.id;
 
   const zone = await zoneService.updateZone(zoneId, userId, {
     name,
     city,
-    coordinates,
-    radiusInKm,
+    location,
     status,
   });
 

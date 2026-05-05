@@ -51,7 +51,7 @@ export const verifyOtp = async (phone, otp) => {
   }
   
   // Generate JWT
-  const token = jwt.generateToken({ id: user._id, phone: user.phone });
+  const token = jwt.generateToken({ id: user._id, phone: user.phone, role: user.role });
   
   // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
@@ -71,7 +71,7 @@ export const login = async (phone, password) => {
   }
   
   // Generate JWT
-  const token = jwt.generateToken({ id: user._id, phone: user.phone });
+  const token = jwt.generateToken({ id: user._id, phone: user.phone, role: user.role });
   
   // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
@@ -98,7 +98,7 @@ export const register = async (phone, name, password, role = 'rider') => {
   }).save();
   
   // Generate JWT
-  const token = jwt.generateToken({ id: user._id, phone: user.phone });
+  const token = jwt.generateToken({ id: user._id, phone: user.phone, role: user.role });
   
   // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
