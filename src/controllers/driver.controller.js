@@ -13,13 +13,13 @@ export const createDriver = async (req, res) => {
     }
 };
 
-export const sendOtp = asyncHandler(async (req, res) => {
+export const sendOtp = (async (req, res) => {
     const { phone, name, password } = req.body;
     await authService.sendOtp(phone, name, password);
     response.success(res, 'OTP sent successfully');
 });
 
-export const verifyOtp = asyncHandler(async (req, res) => {
+export const verifyOtp = (async (req, res) => {
     const { phone, otp } = req.body;
     const result = await authService.verifyOtp(phone, otp);
     response.success(res, 'OTP verified and logged in', result);
