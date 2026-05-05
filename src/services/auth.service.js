@@ -4,7 +4,7 @@ import otpCache from '../cache/otp.cache.js';
 import sessionCache from '../cache/session.cache.js';
 import {jwt } from '../utils/index.js';
 
-const sendOtp = async (phone, name, password) => {
+export const sendOtp = async (phone, name, password) => {
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   
@@ -21,7 +21,7 @@ const sendOtp = async (phone, name, password) => {
   // Example: await sendFirebaseNotification(phone, `Your OTP is ${otp}`);
 };
 
-const verifyOtp = async (phone, otp) => {
+export const verifyOtp = async (phone, otp) => {
   const storedOtp = await otpCache.getOtp(phone);
   if (!storedOtp || storedOtp !== otp) {
     throw new Error('Invalid or expired OTP');
@@ -59,7 +59,7 @@ const verifyOtp = async (phone, otp) => {
   return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
 };
 
-const login = async (phone, password) => {
+export const login = async (phone, password) => {
   const user = await User.findOne({ phone }).lean();
   if (!user) {
     throw new Error('User not found');
@@ -79,8 +79,3 @@ const login = async (phone, password) => {
   return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
 };
 
-export default {
-  sendOtp,
-  verifyOtp,
-  login,
-};
