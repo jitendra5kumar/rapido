@@ -1,6 +1,6 @@
 import User from '../models/user.model.js';
 
-const getProfile = async (userId) => {
+export const getProfile = async (userId) => {
   const user = await User.findById(userId).lean();
   if (!user) {
     throw new Error('User not found');
@@ -15,6 +15,3 @@ const getProfile = async (userId) => {
   };
 };
 
-export default {
-  getProfile,
-};

@@ -16,9 +16,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  code: {
+    type: String,
+  },
   role: {
     type: String,
-    enum: ['rider', 'driver'],
+    enum: ['rider', 'driver', 'admin'],
     default: 'rider',
   },
   createdAt: {

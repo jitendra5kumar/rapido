@@ -1,5 +1,5 @@
 import express from 'express';
-import authController from '../controllers/auth.controller.js';
+import * as authController from '../controllers/auth.controller.js';
 import {sendOtp as sendOtpValidator, verifyOtp as verifyOtpValidator, login as loginValidator } from '../validators/auth.validator.js';
 import {rateLimitMiddleware } from '../middlewares/index.js';
 import {handleValidationErrors } from '../middlewares/error.middleware.js';
