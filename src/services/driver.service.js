@@ -21,6 +21,7 @@ export const createDriverService = async (payload) => {
             throw new Error("Email already exists");
         }
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // ✅ Safe location handling
@@ -99,44 +100,91 @@ export const logoutService = async (userId) => {
     return true;
 };
 
-// export const updateDriverService = async (userId, body) => {
-//   // ✅ allowed fields (security)
-//   const allowedFields = [
-//     "name",
-//     "email",
-//     "gender",
-//     "profile_image_id",
-//     "service_id",
-//     "service_category_id",
-//     "aadhaar_number",
-//     "pan_number",
-//     "rc_number",
-//     "dl_number",
-//     "insurance_policy_number",
-//     "fcm_token",
-//     "is_online",
-//     "location",
-//   ];
+export const sendOtp = async (phone, name, password, email = null) => {
+    if (!phone) {
+        throw new Error("Phone number is required");
+    }
 
-//   const updates = {};
+    // ✅ basic phone validation (India)
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+        throw new Error("Invalid phone number");
+    }
 
-//   for (let key of allowedFields) {
-//     if (body[key] !== undefined) {
-//       updates[key] = body[key];
-//     }
-//   }
+    // ✅ rate limit (1 min)
+    const existingOtp = await otpCache.getOtp(phone);
+    if (existingOtp) {
+        throw new Error("OTP already sent. Please wait 60 seconds");
+    }
 
-//   // ❌ block sensitive fields
-//   delete updates.password;
-//   delete updates.role;
+    // ✅ Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-//   const user = await User.findByIdAndUpdate(userId, updates, {
-//     new: true,
-//   });
+    // ✅ store OTP with expiry (60 sec)
+    await otpCache.setOtp(phone, otp, 60);
 
-//   if (!user) {
-//     throw new Error("Driver not found");
-//   }
+    // ✅ store user data (temporary)
+    await otpCache.setData(
+        phone,
+        { name, password, email },
+        300 // 5 min expiry
+    );
 
-//   return user;
-// };
+    // 🔥 For dev only
+    console.log(`OTP for ${phone}: ${otp}`);
+
+    // TODO: integrate SMS provider (MSG91, Twilio, Firebase)
+
+    return {
+        message: "OTP sent successfully",
+        phone,
+    };
+};
+
+export const verifyOtp = async (phone, otp) => {
+    const storedOtp = await otpCache.getOtp(phone);
+
+    if (!storedOtp || storedOtp !== otp) {
+        throw new Error("Invalid or expired OTP");
+    }
+
+    const userData = await otpCache.getData(phone);
+
+    if (!userData) {
+        throw new Error("User data not found");
+    }
+
+    // cleanup
+    await otpCache.deleteOtp(phone);
+    await otpCache.deleteData(phone);
+
+    let user = await User.findOne({ phone });
+
+    // ✅ CASE 1: New user (register)
+    if (!user) {
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+        user = await User.create({
+            name: userData.name,
+            phone,
+            password: hashedPassword,
+            role: "driver",
+            location: {
+                type: "Point",
+                coordinates: [0, 0],
+            },
+        });
+    }
+
+    // ✅ CASE 2: Existing user (login)
+
+    const token = jwt.sign(
+        { id: user._id, phone: user.phone },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+    );
+
+    return {
+        token,
+        user,
+    };
+};
