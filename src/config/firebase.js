@@ -16,14 +16,14 @@ const firebaseCredentials = (() => {
     try {
       return JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     } catch (error) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT must be valid JSON.');
+      console.warn('Invalid FIREBASE_SERVICE_ACCOUNT JSON:', error.message);
+      return null;
     }
   }
 
   if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
-    throw new Error(
-      'Firebase Admin initialization requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.'
-    );
+    console.warn('Firebase credentials not fully configured. Some features may not work.');
+    return null;
   }
 
   return {
@@ -40,8 +40,13 @@ const firebaseCredentials = (() => {
   };
 })();
 
-admin.initializeApp({
-  credential: admin.credential.cert(firebaseCredentials),
-});
+if (firebaseCredentials) {
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseCredentials),
+  });
+  console.log('Firebase initialized');
+} else {
+  console.warn('Firebase not initialized - credentials unavailable');
+}
 
 export default admin;

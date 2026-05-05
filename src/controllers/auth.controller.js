@@ -19,3 +19,10 @@ export const login = asyncHandler(async (req, res) => {
   const result = await authService.login(phone, password);
   response.success(res, 'Login successful', result);
 });
+
+export const register = asyncHandler(async (req, res) => {
+  const { phone, name, password } = req.body;
+ 
+  const result = await authService.register(phone, name, password);
+  response.success(res, 'Registration successful', result);
+});

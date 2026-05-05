@@ -15,3 +15,9 @@ export const login = [
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
   body('password').exists().withMessage('Password is required'),
 ];
+
+export const register = [
+  body('phone').isMobilePhone().withMessage('Invalid phone number'),
+  body('name').isLength({ min: 1 }).withMessage('Name is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+];
