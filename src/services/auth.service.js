@@ -79,3 +79,30 @@ export const login = async (phone, password) => {
   return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
 };
 
+export const register = async (phone, name, password, role = 'rider') => {
+  // Check if user already exists
+  const existingUser = await User.findOne({ phone });
+  if (existingUser) {
+    throw new Error('User already registered with this phone number');
+  }
+  
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // Create new user
+  const user = await new User({
+    name,
+    phone,
+    password: hashedPassword,
+    role,
+  }).save();
+  
+  // Generate JWT
+  const token = jwt.generateToken({ id: user._id, phone: user.phone });
+  
+  // Store session in Redis
+  await sessionCache.setSession(user._id.toString(), token);
+  
+  return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
+};
+
