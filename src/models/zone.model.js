@@ -2,11 +2,12 @@ import mongoose from 'mongoose';
 
 const zoneSchema = new mongoose.Schema(
   {
- name: {
+    name: {
       type: String,
       required: true,
+      trim: true,
     },
-   userId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
@@ -16,23 +17,16 @@ const zoneSchema = new mongoose.Schema(
       ref: 'City',
       required: true,
     },
-    // 📍 Center point of zone
     location: {
       type: {
         type: String,
-        enum: ['Point'],
-        default: 'Point',
+        enum: ['Polygon'],
+        default: 'Polygon',
       },
       coordinates: {
-        type: [Number], // [lng, lat]
+        type: [[[Number]]],
         required: true,
       },
-    },
-
-    // 📏 Radius of zone in KM
-    radiusInKm: {
-      type: Number,
-      required: true,
     },
     status: {
       type: String,
@@ -45,7 +39,6 @@ const zoneSchema = new mongoose.Schema(
   }
 );
 
-// 🚀 Important for geo queries
 zoneSchema.index({ location: '2dsphere' });
 
 export default mongoose.model('Zone', zoneSchema);
