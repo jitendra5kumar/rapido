@@ -121,10 +121,10 @@ const userSchema = new mongoose.Schema(
         default: "Point",
       },
       coordinates: {
-        type: [Number], // [lng, lat]
+        type: [Number],
+        default: [0, 0], // ✅ MUST ADD THIS
       },
     },
-
     service_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
