@@ -30,6 +30,7 @@ const vehicleSchema = new mongoose.Schema(
 
     commission_type: { type: String, enum: ["percentage", "fixed"] },
     commission_rate: Number,
+    
 
     created_by_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 

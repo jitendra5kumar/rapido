@@ -6,6 +6,7 @@ import cityRoutes from './city.routes.js';
 import alertRoutes from './alert.routes.js';
 import vehicleCustomRoutes from './vehicleCustom.routes.js';
 import vehicletype from './vehicle.routes.js';
+import driverRoutes from "./driver.routes.js"
 
 const router = express.Router();
 
@@ -16,5 +17,8 @@ router.use('/city', cityRoutes);
 router.use('/alert', alertRoutes);
 router.use('/vehicle-custom', vehicleCustomRoutes);
 router.use('/type',vehicletype)
+router.use('/type', vehicletype);
+router.use("/driver", driverRoutes)
+
 
 export default router;
