@@ -9,6 +9,7 @@ import vehicletype from './vehicle.routes.js';
 import driverRoutes from "./driver.routes.js"
 import serviceRoute from './service.routes.js'
 import driverdocRoutes from './driverDocument.route.js'
+import DriverVehicle from "./driverVehicle.route.js"
 
 const router = express.Router();
 
@@ -21,8 +22,9 @@ router.use('/vehicle-custom', vehicleCustomRoutes);
 router.use('/type',vehicletype)
 router.use('/type', vehicletype);
 router.use("/driver", driverRoutes)
-router.use("/service", serviceRoute)
+router.use("/services", serviceRoute)
 router.use("/driver-doc", driverdocRoutes)
+router.use("/driver-vehicle", DriverVehicle)
 
 
 
