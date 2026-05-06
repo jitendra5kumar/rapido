@@ -5,6 +5,7 @@ import {
   createRide,
   updateRide,
   getRide,
+  updateRideStatus,
   rideAction,
   cancelRide,
 } from '../validators/ride.validator.js';
@@ -16,7 +17,7 @@ router.use(authMiddleware);
 
 router.post(
   '/',
-  requireRoles('rider', 'admin', 'sub_admin'),
+ 
   createRide,
   handleValidationErrors,
   rideController.createRide
@@ -28,6 +29,7 @@ router.get('/', rideController.getAllRides);
 router.put('/:rideId', requireRoles('admin', 'sub_admin', 'driver', 'rider'), getRide, updateRide, handleValidationErrors, rideController.updateRide);
 router.post('/:rideId/accept', requireRoles('admin', 'sub_admin', 'driver'), rideAction, handleValidationErrors, rideController.acceptRide);
 router.post('/:rideId/complete', requireRoles('admin', 'sub_admin', 'driver'), getRide, handleValidationErrors, rideController.completeRide);
+router.patch('/:rideId/status', requireRoles('admin', 'sub_admin', 'driver'), updateRideStatus, handleValidationErrors, rideController.updateRideStatusOtp);
 router.post('/:rideId/cancel', requireRoles('admin', 'sub_admin', 'driver', 'rider'), cancelRide, handleValidationErrors, rideController.cancelRide);
 
 export default router;

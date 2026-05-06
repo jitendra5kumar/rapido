@@ -11,3 +11,24 @@ export default {
   OTP_EXPIRY,
   SESSION_EXPIRY,
 };
+
+
+export const RIDE_STATUS = {
+  SEARCHING: 'searching',
+
+  ACCEPTED: 'accepted',
+
+  ARRIVED: 'arrived',
+
+  ONGOING: 'ongoing',
+
+  COMPLETED: 'completed',
+
+  CANCELLED: 'cancelled',
+
+  NO_DRIVER_FOUND:
+    'no_driver_found',
+
+  SEARCH_TIMEOUT:
+    'search_timeout',
+};

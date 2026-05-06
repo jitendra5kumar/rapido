@@ -8,7 +8,7 @@ const authMiddleware = async (req, res, next) => {
   // }
 
   // const token = authHeader.substring(7);
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Zjk4ZDU3OGRhYmM2NWZhMGY0YzQ4NSIsInBob25lIjoiMTIzNDU2Nzg5MCIsInJvbGUiOiJzdWJfYWRtaW4iLCJpYXQiOjE3Nzc5ODAwNzcsImV4cCI6MTc3Nzk4MzY3N30.Lk3RpmrbA19f5X4wB5BceCUvLFpIzGKcOHKlu1Ay_4M"
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Zjk4ZDU3OGRhYmM2NWZhMGY0YzQ4NSIsInBob25lIjoiMTIzNDU2Nzg5MCIsInJvbGUiOiJzdWJfYWRtaW4iLCJpYXQiOjE3NzgwNTI2MTYsImV4cCI6MTc3ODA1NjIxNn0.coBH73xbUr03WLdNADOUk-EdgXpUmkaHPArHB9XO0OM"
 
   try {
     const decoded = jwt.verifyToken(token);

@@ -19,7 +19,7 @@ const rideSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["searching", "accepted", "arrived", "ongoing", "completed", "cancelled"],
+      enum: ["searching", "accepted", "arrived", "ongoing", "completed", "cancelled","search_timeout"],
       default: "searching",
       index: true,
     },
