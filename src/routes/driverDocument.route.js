@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { uploadDriverDocuments } from "../controllers/driverDocument.controller.js";
+import { updateDocumentStatusController, uploadDriverDocuments } from "../controllers/driverDocument.controller.js";
+import authMiddleware from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
@@ -20,6 +21,12 @@ router.post(
     { name: "insurance", maxCount: 1 },
   ]),
   uploadDriverDocuments
+);
+
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  updateDocumentStatusController
 );
 
 export default router;

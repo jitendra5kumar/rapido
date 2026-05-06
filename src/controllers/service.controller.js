@@ -9,7 +9,16 @@ import {
 // ➤ Create
 export const createService = async (req, res) => {
     try {
-        const service = await createServiceService(req.body);
+        console.log("BODY:", req.body);
+        console.log("FILES:", req.files);
+
+        const data = {
+            ...req.body,
+            image: req.files?.image?.[0]?.buffer,
+            icon: req.files?.icon?.[0]?.buffer,
+        };
+
+        const service = await createServiceService(data);
 
         return res.status(201).json({
             success: true,
@@ -61,7 +70,24 @@ export const getServiceById = async (req, res) => {
 // ➤ Update
 export const updateService = async (req, res) => {
     try {
-        const updated = await updateServiceService(req.params.id, req.body);
+        console.log("BODY:", req.body);
+        console.log("FILES:", req.files);
+
+        const data = {
+            ...req.body,
+        };
+
+        // ✅ handle image
+        if (req.files?.image) {
+            data.image = req.files.image[0].buffer;
+        }
+
+        // ✅ handle icon
+        if (req.files?.icon) {
+            data.icon = req.files.icon[0].buffer;
+        }
+
+        const updated = await updateServiceService(req.params.id, data);
 
         return res.status(200).json({
             success: true,

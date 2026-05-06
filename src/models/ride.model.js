@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const rideSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    driverId: { type: mongoose.Schema.Types.ObjectId, ref: "Driver", default: null },
+    driverId: { type: mongoose.Schema.Types.ObjectId, ref: "DriverVehicle", default: null },
 
     pickupLocation: {
       type: { type: String, default: "Point", enum: ["Point"] },
