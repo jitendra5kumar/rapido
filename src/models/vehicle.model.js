@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const vehicleSchema = new mongoose.Schema(
   {
-    name: { type: String,  trim: true },
+    name: { type: String, trim: true },
 
     vehicle_image: String,
     vehicle_map_icon: String,
@@ -14,14 +14,11 @@ const vehicleSchema = new mongoose.Schema(
     max_seat: Number,
     base_amount: Number,
 
-    min_per_unit_charge: Number,
-    max_per_unit_charge: Number,
+    per_unit_charge: Number,
 
-    min_per_min_charge: Number,
-    max_per_min_charge: Number,
+    per_min_charge: Number,
 
-    min_per_weight_charge: Number,
-    max_per_weight_charge: Number,
+    per_weight_charge: Number,
 
     cancellation_charge: Number,
     waiting_time_charge: Number,
@@ -30,7 +27,7 @@ const vehicleSchema = new mongoose.Schema(
 
     commission_type: { type: String, enum: ["percentage", "fixed"] },
     commission_rate: Number,
-    
+
 
     created_by_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 

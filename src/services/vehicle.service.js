@@ -35,14 +35,11 @@ export const createVehicle = async (data, files) => {
 
     base_amount: Number(data.base_amount),
 
-    min_per_unit_charge: Number(data.min_per_unit_charge),
-    max_per_unit_charge: Number(data.max_per_unit_charge),
+    per_unit_charge: Number(data.per_unit_charge),
 
-    min_per_min_charge: Number(data.min_per_min_charge),
-    max_per_min_charge: Number(data.max_per_min_charge),
+    per_min_charge: Number(data.per_min_charge),
 
-    min_per_weight_charge: Number(data.min_per_weight_charge),
-    max_per_weight_charge: Number(data.max_per_weight_charge),
+    per_weight_charge: Number(data.per_weight_charge),
 
     cancellation_charge: Number(data.cancellation_charge),
     waiting_time_charge: Number(data.waiting_time_charge),
@@ -106,11 +103,11 @@ export const updateVehicle = async (id, data, files) => {
   const numberFields = [
     "max_seat",
     "base_amount",
-    "min_per_unit_charge",
+    "per_unit_charge",
     "max_per_unit_charge",
-    "min_per_min_charge",
+    "per_min_charge",
     "max_per_min_charge",
-    "min_per_weight_charge",
+    "per_weight_charge",
     "max_per_weight_charge",
     "cancellation_charge",
     "waiting_time_charge",
