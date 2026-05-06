@@ -1,5 +1,3 @@
-// services/notification.service.js
-
 import admin from "../config/firebase.js";
 import User from "../models/user.model.js";
 
@@ -12,15 +10,18 @@ export const sendNotificationByRole = async (role, title, body) => {
     roles = [role];
   }
 
+  // 🔥 USE FCM TOKEN (NOT firebase_uid)
   const users = await User.find({
     role: { $in: roles },
-    firebase_uid: { $exists: true, $ne: null },
+    fcm_token: { $exists: true, $ne: null },
   });
 
-  const tokens = users.map((u) => u.firebase_uid);
+  const tokens = users
+    .map((u) => u.fcm_token)
+    .filter(Boolean);
 
   if (!tokens.length) {
-    throw new Error("No tokens found");
+    throw new Error("No FCM tokens found");
   }
 
   const response = await admin.messaging().sendMulticast({

@@ -114,6 +114,11 @@ const userSchema = new mongoose.Schema(
       enum: ["rider", "driver", "admin", "sub_admin"],
       default: "rider",
     },
+    wallet: {
+      type: Number,
+      default: 0,
+    },
+
   },
   {
     timestamps: true,

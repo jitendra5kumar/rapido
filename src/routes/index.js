@@ -11,6 +11,8 @@ import serviceRoute from './service.routes.js'
 import driverdocRoutes from './driverDocument.route.js'
 import DriverVehicle from "./driverVehicle.route.js"
 import Notification  from './notification.routes.js';
+import walletRoutes  from './wallet.route.js';
+
 
 const router = express.Router();
 
@@ -27,6 +29,7 @@ router.use("/services", serviceRoute)
 router.use("/driver-doc", driverdocRoutes)
 router.use("/driver-vehicle", DriverVehicle)
 router.use("/notifications", Notification)
+router.use("/wallet", walletRoutes)
 
 
 

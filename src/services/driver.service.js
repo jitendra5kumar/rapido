@@ -1,6 +1,71 @@
+import crypto from "crypto";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
+// 🎯 referral code generator
+const generateReferralCode = () => {
+    return crypto.randomBytes(4).toString("hex").toUpperCase();
+};
+
+export const verifyOtp = async (phone, otp) => {
+    const storedOtp = await otpCache.getOtp(phone);
+
+    if (!storedOtp || storedOtp !== otp) {
+        throw new Error("Invalid or expired OTP");
+    }
+
+    const userData = await otpCache.getData(phone);
+
+    if (!userData) {
+        throw new Error("User data not found");
+    }
+
+    await otpCache.deleteOtp(phone);
+    await otpCache.deleteData(phone);
+
+    let user = await User.findOne({ phone });
+
+    if (!user) {
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+        // 🔥 unique referral code generate
+        let referral_code;
+        let isUnique = false;
+
+        while (!isUnique) {
+            referral_code = generateReferralCode();
+            const exists = await User.findOne({ referral_code });
+            if (!exists) isUnique = true;
+        }
+
+        user = await User.create({
+            name: userData.name,
+            phone,
+            password: hashedPassword,
+            email: userData.email || null,
+            role: "driver",
+            referral_code, // ✅ added here
+        });
+    }
+
+    const token = jwt.sign(
+        { id: user._id, phone: user.phone, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+    );
+
+    return {
+        token,
+        user: {
+            id: user._id,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+            referral_code: user.referral_code, // optional but useful
+        },
+    };
+};
 
 export const createDriverService = async (payload) => {
     const { name, phone, password, email } = payload;
@@ -113,43 +178,4 @@ export const sendOtp = async (phone, name, password, email = null) => {
     };
 };
 
-export const verifyOtp = async (phone, otp) => {
-    const storedOtp = await otpCache.getOtp(phone);
 
-    if (!storedOtp || storedOtp !== otp) {
-        throw new Error("Invalid or expired OTP");
-    }
-
-    const userData = await otpCache.getData(phone);
-
-    if (!userData) {
-        throw new Error("User data not found");
-    }
-
-    await otpCache.deleteOtp(phone);
-    await otpCache.deleteData(phone);
-
-    let user = await User.findOne({ phone });
-
-    if (!user) {
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-
-        user = await User.create({
-            name: userData.name,
-            phone,
-            password: hashedPassword,
-            role: "driver",
-        });
-    }
-
-    const token = jwt.sign(
-        { id: user._id, phone: user.phone },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-    );
-
-    return {
-        token,
-        user,
-    };
-};

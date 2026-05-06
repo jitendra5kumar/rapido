@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
     createService,
     getAllServices,
@@ -6,29 +7,37 @@ import {
     updateService,
     deleteService,
 } from "../controllers/service.controller.js";
+
 import upload from "../../uploads/upload.js";
+import authMiddleware, { requireRoles } from "../middlewares/auth.middleware.js";
+import { rateLimitMiddleware } from "../middlewares/index.js";
 
 const router = express.Router();
 
-
-// ➤ Create
+// 🔐 Create Service (Admin only)
 router.post(
     "/",
+    authMiddleware,
+    rateLimitMiddleware,
     upload.fields([
         { name: "image", maxCount: 1 },
         { name: "icon", maxCount: 1 }
     ]),
     createService
 );
-// ➤ Get All
+
+// 📦 Get All Services (Public)
 router.get("/", getAllServices);
 
-// ➤ Get One
+// 🔍 Get Single Service (Public)
 router.get("/:id", getServiceById);
 
-// ➤ Update
+// ✏️ Update Service (Admin only)
 router.put(
     "/:id",
+    authMiddleware,
+    rateLimitMiddleware,
+    requireRoles('admin', 'sub_admin'),
     upload.fields([
         { name: "image", maxCount: 1 },
         { name: "icon", maxCount: 1 }
@@ -36,7 +45,13 @@ router.put(
     updateService
 );
 
-// ➤ Delete
-router.delete("/:id", deleteService);
+// ❌ Delete Service (Admin only)
+router.delete(
+    "/:id",
+    authMiddleware,
+    rateLimitMiddleware,
+    requireRoles('admin', 'sub_admin'),
+    deleteService
+);
 
 export default router;

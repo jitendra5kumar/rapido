@@ -1,4 +1,5 @@
 import express from "express";
+
 import upload from "../../uploads/upload.js";
 
 import {
@@ -9,13 +10,17 @@ import {
   deleteVehicleController,
 } from "../controllers/vehicle.controller.js";
 
+import { authMiddleware, rateLimitMiddleware, requireRoles } from "../middlewares/index.js";
+
 const router = express.Router();
 
 /**
- * CREATE VEHICLE
+ * 🚗 CREATE VEHICLE (Admin only)
  */
 router.post(
-  "/create",
+  "/",
+  authMiddleware,
+  rateLimitMiddleware,
   upload.fields([
     { name: "vehicle_image", maxCount: 1 },
     { name: "vehicle_map_icon", maxCount: 1 },
@@ -24,20 +29,23 @@ router.post(
 );
 
 /**
- * GET ALL VEHICLES
+ * 📦 GET ALL VEHICLES (Public)
  */
 router.get("/", getVehiclesController);
 
 /**
- * GET SINGLE VEHICLE
+ * 🔍 GET SINGLE VEHICLE (Public)
  */
 router.get("/:id", getVehicleByIdController);
 
 /**
- * UPDATE VEHICLE
+ * ✏️ UPDATE VEHICLE (Admin only)
  */
 router.put(
   "/:id",
+  authMiddleware,
+  rateLimitMiddleware,
+  requireRoles('admin', 'sub_admin'),
   upload.fields([
     { name: "vehicle_image", maxCount: 1 },
     { name: "vehicle_map_icon", maxCount: 1 },
@@ -46,8 +54,14 @@ router.put(
 );
 
 /**
- * DELETE VEHICLE
+ * ❌ DELETE VEHICLE (Admin only)
  */
-router.delete("/:id", deleteVehicleController);
+router.delete(
+  "/:id",
+  authMiddleware,
+  rateLimitMiddleware,
+  requireRoles('admin', 'sub_admin'),
+  deleteVehicleController
+);
 
 export default router;
