@@ -6,9 +6,10 @@ import cityRoutes from './city.routes.js';
 import alertRoutes from './alert.routes.js';
 import vehicleCustomRoutes from './vehicleCustom.routes.js';
 import vehicletype from './vehicle.routes.js';
-import driverRoutes from "./driver.routes.js"
-import serviceRoute from './service.routes.js'
-import driverdocRoutes from './driverDocument.route.js'
+import driverRoutes from './driver.routes.js';
+import serviceRoute from './service.routes.js';
+import driverdocRoutes from './driverDocument.route.js';
+import rideRoutes from './ride.routes.js';
 
 const router = express.Router();
 
@@ -18,11 +19,12 @@ router.use('/zone', zoneRoutes);
 router.use('/city', cityRoutes);
 router.use('/alert', alertRoutes);
 router.use('/vehicle-custom', vehicleCustomRoutes);
-router.use('/type',vehicletype)
+router.use('/type', vehicletype);
 
-router.use("/driver", driverRoutes)
-router.use("/service", serviceRoute)
-router.use("/driver-doc", driverdocRoutes)
+router.use('/driver', driverRoutes);
+router.use('/service', serviceRoute);
+router.use('/driver-doc', driverdocRoutes);
+router.use('/ride', rideRoutes);
 
 
 
