@@ -67,13 +67,38 @@ const userSchema = new mongoose.Schema(
       default: "active",
     },
 
-    
+    fleet_manager_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
 
     referral_code: {
       type: String,
       index: true,
     },
 
+    referred_by_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    created_by_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    fcm_token: {
+      type: String,
+    },
+
+    system_reserve: {
+      type: Number,
+      default: 0,
+    },
+
+    remember_token: {
+      type: String,
+    },
 
     deleted_at: {
       type: Date,
