@@ -1,10 +1,14 @@
-import {Server } from 'socket.io';
+import { Server } from "socket.io";
 
-export default (server) => {
+const ioLoader = (server) => {
   const io = new Server(server, {
     cors: {
       origin: "*",
+      methods: ["GET", "POST"],
     },
   });
+
   return io;
 };
+
+export default ioLoader;

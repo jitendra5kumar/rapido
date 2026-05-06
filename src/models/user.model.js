@@ -19,10 +19,6 @@ const userSchema = new mongoose.Schema(
       type: Date,
     },
 
-    country_code: {
-      type: String,
-      default: "+91",
-    },
 
     phone: {
       type: String,
@@ -37,9 +33,7 @@ const userSchema = new mongoose.Schema(
     },
 
     // ⚠️ avoid in production
-    plain_password: {
-      type: String,
-    },
+
 
     gender: {
       type: String,
@@ -47,8 +41,7 @@ const userSchema = new mongoose.Schema(
     },
 
     profile_image_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "File",
+     type:String
     },
 
     firebase_uid: {
