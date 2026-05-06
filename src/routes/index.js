@@ -17,7 +17,7 @@ router.use('/city', cityRoutes);
 router.use('/alert', alertRoutes);
 router.use('/vehicle-custom', vehicleCustomRoutes);
 router.use('/type',vehicletype)
-router.use('/type', vehicletype);
+
 router.use("/driver", driverRoutes)
 
 

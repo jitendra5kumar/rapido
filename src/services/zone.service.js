@@ -55,7 +55,6 @@ export const updateZone = async (zoneId, userId, { name, city, location, status 
   if (zone.userId.toString() !== userId) {
     throw new Error('Unauthorized to update this zone');
   }
-
   if (name) zone.name = name;
   if (city) zone.city = city;
   if (status) zone.status = status;

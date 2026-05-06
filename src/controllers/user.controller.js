@@ -8,3 +8,13 @@ export const getProfile = asyncHandler(async (req, res) => {
   response.success(res, 'Profile fetched successfully', user);
 });
 
+export const changeUserRole = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+  const performedById = req.user.id;
+  const performedByRole = req.user.role;
+
+  const updatedUser = await userService.changeUserRole(userId, role, performedById, performedByRole);
+  response.success(res, 'User role updated successfully', updatedUser);
+});
+
