@@ -1,13 +1,13 @@
-// notification.worker.js
+// src/workers/notification.worker.js
 
 import mongoose from 'mongoose';
 import redis from '../config/redis.js';
 import { MONGO_URI } from '../config/env.js';
 
 import {
-  getDriverFcmToken,
-  sendRideNotification,
-  removeDriverFcmToken,
+  getFcmToken,
+  sendFirebaseMessage,
+  removeFcmToken,
 } from '../services/notification.service.js';
 
 import {
@@ -22,7 +22,7 @@ const CONSUMER_NAME =
 const BLOCK_MS = 5000;
 const CLAIM_IDLE_MS = 30000;
 const READ_COUNT = 10;
-const NOTIFICATION_EXPIRE_MS = 15000;
+const NOTIFICATION_EXPIRE_MS = 300000;
 
 let isRunning = true;
 
@@ -61,6 +61,14 @@ const parseStreamFields = (fields) => {
   return result;
 };
 
+const safeParseJson = (value) => {
+  try {
+    return value ? JSON.parse(value) : {};
+  } catch (err) {
+    return {};
+  }
+};
+
 const ensureGroup = async () => {
   try {
     await redis.xgroup(
@@ -71,9 +79,7 @@ const ensureGroup = async () => {
       'MKSTREAM'
     );
 
-    console.log(
-      'Notification consumer group created'
-    );
+    console.log('Notification consumer group created');
   } catch (err) {
     if (!err.message.includes('BUSYGROUP')) {
       throw err;
@@ -81,228 +87,176 @@ const ensureGroup = async () => {
   }
 };
 
-const recoverPendingMessages =
-  async () => {
-    try {
-      const result =
-        await redis.xautoclaim(
-          NOTIFICATION_STREAM,
-          NOTIFICATION_CONSUMER_GROUP,
-          CONSUMER_NAME,
-          CLAIM_IDLE_MS,
-          '0-0',
-          'COUNT',
-          20
-        );
+const recoverPendingMessages = async () => {
+  try {
+    const result = await redis.xautoclaim(
+      NOTIFICATION_STREAM,
+      NOTIFICATION_CONSUMER_GROUP,
+      CONSUMER_NAME,
+      CLAIM_IDLE_MS,
+      '0-0',
+      'COUNT',
+      20
+    );
 
-      if (result?.[1]?.length) {
-        console.log(
-          `Recovered ${result[1].length} pending notification messages`
-        );
-      }
-    } catch (err) {
-      console.error(
-        'XAUTOCLAIM failed:',
-        err.message || err
+    if (result?.[1]?.length) {
+      console.log(
+        `Recovered ${result[1].length} pending notification messages`
       );
     }
-  };
+  } catch (err) {
+    console.error('XAUTOCLAIM failed:', err.message || err);
+  }
+};
 
-const processNotification =
-  async (streamId, fields) => {
-    const message =
-      parseStreamFields(fields);
+const processNotification = async (streamId, fields) => {
+  const message = parseStreamFields(fields);
+  const {
+    targetType,
+    targetId,
+    event,
+    rideId,
+    status,
+    title,
+    body,
+    payload,
+    sentAt,
+  } = message;
 
-    const {
-      rideId,
-      driverId,
-      distance,
-      requestedAt,
-    } = message;
+  if (!targetType || !targetId || !event || !rideId || !title || !body) {
+    await redis.xack(
+      NOTIFICATION_STREAM,
+      NOTIFICATION_CONSUMER_GROUP,
+      streamId
+    );
+    return;
+  }
 
-    if (!rideId || !driverId) {
+  try {
+    const dedupeKey = `notify:${targetType}:${targetId}:${rideId}:${event}`;
+    const dedupe = await redis.set(dedupeKey, '1', 'NX', 'EX', 30);
+    if (!dedupe) {
       await redis.xack(
         NOTIFICATION_STREAM,
         NOTIFICATION_CONSUMER_GROUP,
         streamId
       );
-
       return;
     }
 
-    try {
-      // Prevent duplicate notifications
-      const dedupeKey =
-        `notify:${rideId}:${driverId}`;
-
-      const dedupe =
-        await redis.set(
-          dedupeKey,
-          '1',
-          'NX',
-          'EX',
-          30
-        );
-
-      if (!dedupe) {
+    if (sentAt) {
+      const age = Date.now() - new Date(sentAt).getTime();
+      if (age > NOTIFICATION_EXPIRE_MS) {
+        console.log(`Expired notification skipped for ride ${rideId}`);
         await redis.xack(
           NOTIFICATION_STREAM,
           NOTIFICATION_CONSUMER_GROUP,
           streamId
         );
-
         return;
       }
-
-      // Expired notification skip
-      if (requestedAt) {
-        const age =
-          Date.now() -
-          new Date(requestedAt).getTime();
-
-        if (
-          age >
-          NOTIFICATION_EXPIRE_MS
-        ) {
-          console.log(
-            `Expired notification skipped for ride ${rideId}`
-          );
-
-          await redis.xack(
-            NOTIFICATION_STREAM,
-            NOTIFICATION_CONSUMER_GROUP,
-            streamId
-          );
-
-          return;
-        }
-      }
-
-      const token =
-        await getDriverFcmToken(
-          driverId
-        );
-
-      if (!token) {
-        console.warn(
-          `Missing FCM token for driver ${driverId}`
-        );
-
-        await redis.xack(
-          NOTIFICATION_STREAM,
-          NOTIFICATION_CONSUMER_GROUP,
-          streamId
-        );
-
-        return;
-      }
-
-      await sendRideNotification({
-        driverId,
-        rideId,
-        token,
-
-        metadata: {
-          distance:
-            distance || '0',
-        },
-      });
-
-      console.log(
-        `Notification sent to driver ${driverId}`
-      );
-
-      await redis.xack(
-        NOTIFICATION_STREAM,
-        NOTIFICATION_CONSUMER_GROUP,
-        streamId
-      );
-    } catch (err) {
-      console.error(
-        `Notification processing failed`,
-        err.message || err
-      );
-
-      const retryableErrors = [
-        'messaging/internal-error',
-        'messaging/server-unavailable',
-      ];
-
-      if (
-        retryableErrors.includes(
-          err.code
-        )
-      ) {
-        return;
-      }
-
-      if (
-        err.code ===
-          'messaging/registration-token-not-registered' ||
-        err.code ===
-          'messaging/invalid-registration-token'
-      ) {
-        await removeDriverFcmToken(
-          driverId
-        );
-      }
-
-      await redis.xack(
-        NOTIFICATION_STREAM,
-        NOTIFICATION_CONSUMER_GROUP,
-        streamId
-      );
     }
-  };
+
+    const token = await getFcmToken({
+      targetType,
+      targetId,
+    });
+
+    if (!token) {
+      console.warn(
+        `Missing FCM token for ${targetType} ${targetId}`
+      );
+      await redis.xack(
+        NOTIFICATION_STREAM,
+        NOTIFICATION_CONSUMER_GROUP,
+        streamId
+      );
+      return;
+    }
+
+    const parsedPayload = safeParseJson(payload);
+
+    await sendFirebaseMessage({
+      token,
+      title,
+      body,
+      event,
+      rideId,
+      status,
+      payload: parsedPayload,
+    });
+
+    console.log(
+      `Notification sent to ${targetType} ${targetId} for ride ${rideId}`
+    );
+    await redis.xack(
+      NOTIFICATION_STREAM,
+      NOTIFICATION_CONSUMER_GROUP,
+      streamId
+    );
+  } catch (err) {
+    console.error('Notification processing failed:', err.message || err);
+
+    const retryableErrors = [
+      'messaging/internal-error',
+      'messaging/server-unavailable',
+    ];
+
+    const isInvalidToken =
+      err?.code === 'messaging/registration-token-not-registered' ||
+      err?.code === 'messaging/invalid-registration-token';
+
+    if (isInvalidToken) {
+      await removeFcmToken({
+        targetType,
+        targetId,
+      });
+    }
+
+    if (retryableErrors.includes(err?.code)) {
+      return;
+    }
+
+    await redis.xack(
+      NOTIFICATION_STREAM,
+      NOTIFICATION_CONSUMER_GROUP,
+      streamId
+    );
+  }
+};
 
 const startLoop = async () => {
-  console.log(
-    `Notification worker started as ${CONSUMER_NAME}`
-  );
+  console.log(`Notification worker started as ${CONSUMER_NAME}`);
 
   while (isRunning) {
     try {
-      const entries =
-        await redis.xreadgroup(
-          'GROUP',
-          NOTIFICATION_CONSUMER_GROUP,
-          CONSUMER_NAME,
-          'BLOCK',
-          BLOCK_MS,
-          'COUNT',
-          READ_COUNT,
-          'STREAMS',
-          NOTIFICATION_STREAM,
-          '>'
-        );
+      const entries = await redis.xreadgroup(
+        'GROUP',
+        NOTIFICATION_CONSUMER_GROUP,
+        CONSUMER_NAME,
+        'BLOCK',
+        BLOCK_MS,
+        'COUNT',
+        READ_COUNT,
+        'STREAMS',
+        NOTIFICATION_STREAM,
+        '>'
+      );
 
       if (!entries) {
         continue;
       }
 
       const tasks = [];
-
       for (const [, messages] of entries) {
-        for (const [
-          streamId,
-          fields,
-        ] of messages) {
-          tasks.push(
-            processNotification(
-              streamId,
-              fields
-            )
-          );
+        for (const [streamId, fields] of messages) {
+          tasks.push(processNotification(streamId, fields));
         }
       }
 
       await Promise.allSettled(tasks);
     } catch (err) {
-      console.error(
-        'Notification worker loop failed:',
-        err.message || err
-      );
-
+      console.error('Notification worker loop failed:', err.message || err);
       await sleep(2000);
     }
   }
@@ -310,35 +264,22 @@ const startLoop = async () => {
 
 const bootstrap = async () => {
   if (!MONGO_URI) {
-    throw new Error(
-      'MONGO_URI is required'
-    );
+    throw new Error('MONGO_URI is required');
   }
 
-  await mongoose.connect(
-    MONGO_URI,
-    {
-      autoIndex: false,
-      maxPoolSize: 30,
-    }
-  );
+  await mongoose.connect(MONGO_URI, {
+    autoIndex: false,
+    maxPoolSize: 30,
+  });
 
-  console.log(
-    'MongoDB connected'
-  );
+  console.log('MongoDB connected');
 
   await ensureGroup();
-
   await recoverPendingMessages();
-
   await startLoop();
 };
 
 bootstrap().catch((err) => {
-  console.error(
-    'Notification worker bootstrap failed:',
-    err.message || err
-  );
-
+  console.error('Notification worker bootstrap failed:', err.message || err);
   process.exit(1);
 });

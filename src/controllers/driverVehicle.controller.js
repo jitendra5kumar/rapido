@@ -5,20 +5,20 @@ export const uploadDriverVehicle = async (req, res) => {
   try {
     const user_id = req.user.id; // auth middleware required
 
-    const { rc_number, number_plate, seat_count, service_id } = req.body;
+    const { rcNumber, numberPlate, seatCount, serviceId } = req.body;
 
     const files = req.files;
 
     let payload = {
-      rc_number,
-      number_plate,
-      seat_count,
-      service_id,
+      rcNumber,
+      numberPlate,
+      seatCount,
+      serviceId,
     };
 
     // 🚀 Upload vehicle images (max 6)
-    if (files?.vehicle_images) {
-      if (files.vehicle_images.length > 6) {
+    if (files?.vehicleImages) {
+      if (files.vehicleImages.length > 6) {
         return res.status(400).json({
           success: false,
           message: "Max 6 images allowed",
@@ -27,12 +27,12 @@ export const uploadDriverVehicle = async (req, res) => {
 
       const imageUrls = [];
 
-      for (let file of files.vehicle_images) {
+      for (let file of files.vehicleImages) {
         const url = await uploadToImgBB(file.buffer);
         imageUrls.push({ url });
       }
 
-      payload.vehicle_images = imageUrls;
+      payload.vehicleImages = imageUrls;
     }
 
     const vehicle = await createOrUpdateVehicle(user_id, payload);

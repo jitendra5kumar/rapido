@@ -287,6 +287,38 @@ export const acceptRide =
     }
   };
 
+export const arriveRide =
+  async ({
+    rideId,
+    driverId,
+  }) => {
+    const ride = await Ride.findOne({
+      _id: rideId,
+      driverId,
+    });
+
+    if (!ride) {
+      throw new Error('Ride not found');
+    }
+
+    if (ride.status !== RIDE_STATUS.ACCEPTED) {
+      throw new Error('Ride cannot be marked arrived');
+    }
+
+    return await Ride.findByIdAndUpdate(
+      rideId,
+      {
+        $set: {
+          status: RIDE_STATUS.ARRIVED,
+          arrivedAt: new Date(),
+        },
+      },
+      {
+        new: true,
+      }
+    );
+  };
+
 export const startRide =
   async ({
     rideId,

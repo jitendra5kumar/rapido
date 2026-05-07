@@ -8,7 +8,7 @@ const DRIVER_HEARTBEAT_TTL = 15;
 
 const ONLINE_DRIVER_KEY = 'drivers:online';
 const BUSY_DRIVER_KEY = 'drivers:busy';
-
+// socket
 export const updateDriverLocation = async (
   driverId,
   { lat, lng }
@@ -45,7 +45,10 @@ export const updateDriverLocation = async (
 
   await pipeline.exec();
 };
-
+// logout
+// offline
+// disconnect
+// socket
 export const removeDriverLocation =
   async (driverId) => {
     const pipeline = redis.pipeline();
@@ -66,7 +69,8 @@ export const removeDriverLocation =
 
     await pipeline.exec();
   };
-
+// Ride Accept Hone Par Driver Busy Status Set Karna Hai
+// Ride Complete Hone Par Driver Busy Status Remove Karna Hai
 export const setDriverBusyStatus =
   async (driverId, busy) => {
     if (busy) {

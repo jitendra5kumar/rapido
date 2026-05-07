@@ -60,6 +60,10 @@ export const rideAction = [
   body('driverId').optional().isMongoId().withMessage('Driver ID must be a valid MongoDB ID'),
 ];
 
+export const arriveRide = [
+  param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
+];
+
 export const cancelRide = [
   param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
   body('cancelReason').isLength({ min: 1 }).withMessage('Cancel reason is required'),

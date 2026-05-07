@@ -8,6 +8,12 @@ import Ride from '../models/ride.model.js';
 import {
   findNearbyAvailableDrivers,
 } from '../services/driverLocation.service.js';
+import {
+  queueNotification,
+} from '../services/notification.service.js';
+import {
+  NOTIFICATION_EVENTS,
+} from '../utils/constants.js';
 
 import {
   RIDE_REQUESTS_STREAM,
@@ -91,7 +97,6 @@ const autoClaimPendingMessages = async () => {
       'COUNT',
       10
     );
-
     if (result?.[1]?.length) {
       console.log(
         `Recovered ${result[1].length} stale messages`
@@ -133,20 +138,49 @@ const notifyDriver = async ({
   driverId,
   distance,
 }) => {
-  await redis.xadd(
-    NOTIFICATION_STREAM,
-    '*',
-    'type',
-    'NEW_RIDE',
-    'rideId',
-    rideId.toString(),
-    'driverId',
-    driverId.toString(),
-    'distance',
-    distance.toString(),
-    'requestedAt',
-    new Date().toISOString()
+  await queueNotification({
+    targetType: 'driver',
+    targetId: driverId,
+    event: NOTIFICATION_EVENTS.RIDE_REQUEST,
+    rideId,
+    status: 'searching',
+    title: 'New ride request',
+    body: 'You have a new nearby ride request.',
+    payload: {
+      distance,
+    },
+  });
+};
+
+const notifyUserDriverFound = async ({
+  rideId,
+  userId,
+}) => {
+  const lockKey = `ride_notify_found:${rideId}`;
+  const created = await redis.set(
+    lockKey,
+    '1',
+    'NX',
+    'EX',
+    300
   );
+
+  if (!created) {
+    return;
+  }
+
+  await queueNotification({
+    targetType: 'user',
+    targetId: userId,
+    event: NOTIFICATION_EVENTS.RIDE_DRIVER_FOUND,
+    rideId,
+    status: 'searching',
+    title: 'Driver found nearby',
+    body: 'We found a driver close to your pickup location.',
+    payload: {
+      rideId,
+    },
+  });
 };
 
 const waitForDriverResponse = async ({
@@ -201,14 +235,7 @@ const processRideRequest = async (
 
   try {
     const ride = await Ride.findById(rideId)
-      .select(
-        `
-        _id
-        status
-        pickupLocation
-        dispatchMeta
-      `
-      )
+      .select(`_id status pickupLocation userId dispatchMeta`)
       .lean();
 
     if (!ride) {
@@ -270,6 +297,22 @@ const processRideRequest = async (
         }
       );
 
+      if (ride.userId) {
+        await queueNotification({
+          targetType: 'user',
+          targetId: ride.userId.toString(),
+          event: NOTIFICATION_EVENTS.NO_DRIVER_FOUND,
+          rideId,
+          status: 'no_driver_found',
+          title: 'No drivers available',
+          body: 'We could not find a driver nearby right now.',
+          payload: {
+            pickupAddress:
+              ride.pickupLocation?.address || '',
+          },
+        });
+      }
+
       await redis.xack(
         RIDE_REQUESTS_STREAM,
         DISPATCH_CONSUMER_GROUP,
@@ -277,6 +320,13 @@ const processRideRequest = async (
       );
 
       return;
+    }
+
+    if (ride.userId) {
+      await notifyUserDriverFound({
+        rideId,
+        userId: ride.userId.toString(),
+      });
     }
 
     let assigned = false;

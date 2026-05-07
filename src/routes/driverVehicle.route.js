@@ -38,7 +38,7 @@ router.post(
   "/upload",
   authMiddleware,
   upload.fields([
-    { name: "vehicle_images", maxCount: 6 },
+    { name: "vehicleImages", maxCount: 6 },
   ]),
   uploadDriverVehicle
 );

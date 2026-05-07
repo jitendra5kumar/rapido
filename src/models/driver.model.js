@@ -2,39 +2,39 @@ import mongoose from "mongoose";
 
 const statusEnum = ["pending", "approved", "rejected"];
 
-const driverVehicleSchema = new mongoose.Schema(
+const driverSchema = new mongoose.Schema(
   {
-    user_id: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
 
-    service_id: {
+    serviceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
       required: true,
     },
 
-    rc_number: {
+    rcNumber: {
       type: String,
       required: true,
       trim: true,
     },
 
-    number_plate: {
+    numberPlate: {
       type: String,
       required: true,
       trim: true,
     },
 
-    seat_count: {
+    seatCount: {
       type: Number,
       required: true,
     },
 
-    vehicle_images: [
+    vehicleImages: [
       {
         url: String,
       },
@@ -46,12 +46,12 @@ const driverVehicleSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    is_online: {
+    isOnline: {
       type: Boolean,
       default: false, // 👈 by default offline
     },
 
-    verified_by: {
+    verifiedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
@@ -61,16 +61,16 @@ const driverVehicleSchema = new mongoose.Schema(
   }
 );
 
-driverVehicleSchema.path("vehicle_images").validate(function (value) {
+driverSchema.path("vehicleImages").validate(function (value) {
   return value.length <= 6;
 }, "Maximum 6 vehicle images allowed");
 
 
-driverVehicleSchema.pre("validate", async function (next) {
+driverSchema.pre("validate", async function (next) {
   try {
     const User = mongoose.model("User");
 
-    const user = await User.findById(this.user_id);
+    const user = await User.findById(this.userId);
 
     if (!user) {
       return next(new Error("User not found"));
@@ -86,6 +86,6 @@ driverVehicleSchema.pre("validate", async function (next) {
   }
 });
 
-const DriverVehicle = mongoose.model("DriverVehicle", driverVehicleSchema);
+const Driver = mongoose.model("Driver", driverSchema);
 
-export default DriverVehicle;   
+export default Driver;   

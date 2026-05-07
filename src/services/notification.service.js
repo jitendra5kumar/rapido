@@ -1,206 +1,312 @@
-<<<<<<< HEAD
-// notification.service.js
+// services/notification.service.js
 
 import admin from '../config/firebase.js';
-import redis from '../config/redis.js';
+import redis, {
+  NOTIFICATION_STREAM,
+} from '../config/redis.js';
 import User from '../models/user.model.js';
 
 const FCM_CACHE_TTL = 86400;
+const FCM_MESSAGE_TTL_MS = 300000;
+const INVALID_TOKEN_CODES = [
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+  'messaging/third-party-auth-error',
+];
 
-export const cacheDriverFcmToken =
-  async (driverId, token) => {
-    if (!driverId || !token) {
+const buildFcmCacheKey = (
+  targetType,
+  targetId
+) => `${targetType}:fcm:${targetId}`;
+
+const normalizePayload = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [
+      key,
+      value === undefined || value === null
+        ? ''
+        : String(value),
+    ])
+  );
+};
+
+export const cacheFcmToken = async ({
+  targetType,
+  targetId,
+  token,
+}) => {
+  try {
+    if (!targetType || !targetId || !token) {
       return;
     }
 
     await redis.set(
-      `driver:fcm:${driverId}`,
+      buildFcmCacheKey(targetType, targetId),
       token,
       'EX',
       FCM_CACHE_TTL
     );
-  };
+  } catch (err) {
+    console.error('Cache token error:', err.message || err);
+  }
+};
 
-export const removeDriverFcmToken =
-  async (driverId) => {
-    try {
-      await redis.del(
-        `driver:fcm:${driverId}`
-      );
-
-      await User.updateOne(
-        {
-          _id: driverId,
-        },
-        {
-          $unset: {
-            fcm_token: 1,
-          },
-        }
-      );
-    } catch (err) {
-      console.error(
-        'Failed to remove driver token:',
-        err.message || err
-      );
+export const removeFcmToken = async ({
+  targetType,
+  targetId,
+}) => {
+  try {
+    if (!targetType || !targetId) {
+      return;
     }
-  };
 
-export const getDriverFcmToken =
-  async (driverId) => {
-    try {
-      const cacheKey =
-        `driver:fcm:${driverId}`;
+    await redis.del(
+      buildFcmCacheKey(targetType, targetId)
+    );
 
-      const cached =
-        await redis.get(cacheKey);
+    await User.updateOne(
+      { _id: targetId },
+      { $unset: { fcm_token: 1 } }
+    );
+  } catch (err) {
+    console.error('Remove token error:', err.message || err);
+  }
+};
 
-      if (cached) {
-        return cached;
-      }
-
-      const driver =
-        await User.findOne({
-          _id: driverId,
-          role: 'driver',
-          status: 'active',
-        })
-          .select('fcm_token')
-          .lean();
-
-      const token =
-        driver?.fcm_token || null;
-
-      if (token) {
-        await cacheDriverFcmToken(
-          driverId,
-          token
-        );
-      }
-
-      return token;
-    } catch (err) {
-      console.error(
-        'Failed to get FCM token:',
-        err.message || err
-      );
-
+export const getFcmToken = async ({
+  targetType,
+  targetId,
+}) => {
+  try {
+    if (!targetType || !targetId) {
       return null;
     }
-  };
 
-export const sendRideNotification =
-  async ({
-    driverId,
-    rideId,
-    token,
-    metadata = {},
-  }) => {
-    if (!token) {
-      throw new Error(
-        'Missing FCM token'
-      );
+    const cacheKey =
+      buildFcmCacheKey(targetType, targetId);
+
+    const cachedToken = await redis.get(cacheKey);
+    if (cachedToken) {
+      return cachedToken;
     }
 
-    const message = {
-      token,
+    const user = await User.findById(targetId)
+      .select('fcm_token status')
+      .lean();
 
-      android: {
-        priority: 'high',
-        ttl: 15000,
-      },
+    if (!user || !user.fcm_token || user.status !== 'active') {
+      return null;
+    }
 
-      apns: {
-        headers: {
-          'apns-priority': '10',
-        },
-      },
+    await cacheFcmToken({
+      targetType,
+      targetId,
+      token: user.fcm_token,
+    });
 
+    return user.fcm_token;
+  } catch (err) {
+    console.error('Get token error:', err.message || err);
+
+    return null;
+  }
+};
+
+const isInvalidTokenError = (err) =>
+  err &&
+  typeof err.code === 'string' &&
+  INVALID_TOKEN_CODES.includes(err.code);
+
+export const sendFirebaseMessage = async ({
+  token,
+  title,
+  body,
+  event,
+  rideId,
+  status,
+  payload = {},
+}) => {
+  if (!token) {
+    throw new Error('Missing FCM token');
+  }
+
+  const normalizedPayload = normalizePayload(payload);
+
+  const message = {
+    token,
+    android: {
+      priority: 'high',
+      ttl: FCM_MESSAGE_TTL_MS,
       notification: {
-        title: 'New Ride Request',
-        body:
-          'A nearby rider needs pickup.',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
       },
-
-      data: {
-        type: 'ride_request',
-
-        rideId:
-          rideId.toString(),
-
-        ...Object.fromEntries(
-          Object.entries(metadata).map(
-            ([key, value]) => [
-              key,
-              String(value),
-            ]
-          )
+    },
+    apns: {
+      headers: {
+        'apns-priority': '10',
+        'apns-expiration': String(
+          Math.floor(Date.now() / 1000 + FCM_MESSAGE_TTL_MS / 1000)
         ),
       },
-    };
-
-    try {
-      const response =
-        await admin
-          .messaging()
-          .send(message);
-
-      return response;
-    } catch (err) {
-      console.error(
-        `FCM send failed for driver ${driverId}`,
-        err.message || err
-      );
-
-      if (
-        err.code ===
-          'messaging/registration-token-not-registered' ||
-        err.code ===
-          'messaging/invalid-registration-token'
-      ) {
-        await removeDriverFcmToken(
-          driverId
-        );
-      }
-
-      throw err;
-    }
-  };
-=======
-import admin from "../config/firebase.js";
-import User from "../models/user.model.js";
-
-export const sendNotificationByRole = async (role, title, body) => {
-  let roles = [];
-
-  if (role === "both") {
-    roles = ["rider", "driver"];
-  } else {
-    roles = [role];
-  }
-
-  // 🔥 USE FCM TOKEN (NOT firebase_uid)
-  const users = await User.find({
-    role: { $in: roles },
-    fcm_token: { $exists: true, $ne: null },
-  });
-
-  const tokens = users
-    .map((u) => u.fcm_token)
-    .filter(Boolean);
-
-  if (!tokens.length) {
-    throw new Error("No FCM tokens found");
-  }
-
-  const response = await admin.messaging().sendMulticast({
-    tokens,
+      payload: {
+        aps: {
+          sound: 'default',
+          category: 'RIDE_UPDATE',
+        },
+      },
+    },
     notification: {
       title,
       body,
     },
-  });
+    data: {
+      type: event || 'general_notification',
+      rideId: String(rideId || ''),
+      status: String(status || ''),
+      click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      ...normalizedPayload,
+    },
+  };
 
-  return response;
+  return admin.messaging().send(message);
 };
->>>>>>> 4faba7af4e25a661464174652fbf5f8416a0a7e6
+
+export const queueNotification = async ({
+  targetType,
+  targetId,
+  event,
+  rideId,
+  status = '',
+  title,
+  body,
+  payload = {},
+}) => {
+  if (!targetType || !targetId || !event || !rideId || !title || !body) {
+    throw new Error('Missing notification payload fields');
+  }
+
+  const payloadJson = JSON.stringify(payload || {});
+
+  return redis.xadd(
+    NOTIFICATION_STREAM,
+    '*',
+    'targetType',
+    targetType,
+    'targetId',
+    String(targetId),
+    'event',
+    event,
+    'rideId',
+    String(rideId),
+    'status',
+    String(status || ''),
+    'title',
+    title,
+    'body',
+    body,
+    'payload',
+    payloadJson,
+    'sentAt',
+    new Date().toISOString()
+  );
+};
+
+export const sendNotificationToUser = async ({
+  userId,
+  ...rest
+}) => {
+  return queueNotification({
+    targetType: 'user',
+    targetId: userId,
+    ...rest,
+  });
+};
+
+export const sendNotificationToDriver = async ({
+  driverId,
+  ...rest
+}) => {
+  return queueNotification({
+    targetType: 'driver',
+    targetId: driverId,
+    ...rest,
+  });
+};
+
+export const sendNotificationByRole = async (
+  role,
+  title,
+  body
+) => {
+  try {
+    if (!role) {
+      throw new Error('Role is required');
+    }
+
+    if (!title || !body) {
+      throw new Error('Title and body are required');
+    }
+
+    const users = await User.find({
+      role,
+      status: 'active',
+      fcm_token: { $exists: true, $ne: null },
+    }).select('_id fcm_token');
+
+    if (!users.length) {
+      throw new Error(`No active ${role} users found`);
+    }
+
+    const tokens = users
+      .map((user) => user.fcm_token)
+      .filter(Boolean);
+
+    if (!tokens.length) {
+      throw new Error('No valid FCM tokens found');
+    }
+
+    const message = {
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        type: 'general_notification',
+      },
+      tokens,
+    };
+
+    const response = await admin
+      .messaging()
+      .sendEachForMulticast(message);
+
+    response.responses.forEach(async (resp, index) => {
+      if (!resp.success) {
+        const errorCode = resp.error?.code;
+        if (INVALID_TOKEN_CODES.includes(errorCode)) {
+          const invalidUser = users[index];
+          if (invalidUser) {
+            await User.updateOne(
+              { _id: invalidUser._id },
+              { $unset: { fcm_token: 1 } }
+            );
+          }
+        }
+      }
+    });
+
+    return {
+      totalUsers: users.length,
+      totalTokens: tokens.length,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+    };
+  } catch (err) {
+    console.error('Send role notification error:', err.message || err);
+    throw err;
+  }
+};

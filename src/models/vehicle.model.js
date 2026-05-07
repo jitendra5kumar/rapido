@@ -4,40 +4,40 @@ const vehicleSchema = new mongoose.Schema(
   {
     name: { type: String, trim: true },
 
-    vehicle_image: String,
-    vehicle_map_icon: String,
+    vehicleImage: String,
+    vehicleMapIcon: String,
 
-    service_id: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
+    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service" },
 
     slug: { type: String, unique: true },
 
-    max_seat: Number,
-    base_amount: Number,
+    maxSeat: Number,
+    baseAmount: Number,
 
-    per_unit_charge: Number,
+    perUnitCharge: Number,
 
-    per_min_charge: Number,
+    perMinuteCharge: Number,
 
-    per_weight_charge: Number,
+    perWeightCharge: Number,
 
-    cancellation_charge: Number,
-    waiting_time_charge: Number,
+    cancellationCharge: Number,
+    waitingTimeCharge: Number,
 
-    is_all_zones: { type: Boolean, default: true },
+    isAllZones: { type: Boolean, default: true },
 
-    commission_type: { type: String, enum: ["percentage", "fixed"] },
-    commission_rate: Number,
+    commissionType: { type: String, enum: ["percentage", "fixed"] },
+    commissionRate: Number,
 
 
-    created_by_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdById: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
-    tax_id: { type: mongoose.Schema.Types.ObjectId, ref: "Tax" },
+    taxId: { type: mongoose.Schema.Types.ObjectId, ref: "Tax" },
 
     status: { type: String, enum: ["active", "inactive"], default: "active" },
 
-    deleted_at: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Vehicle", vehicleSchema);
+export default mongoose.model("VehicleType", vehicleSchema);
