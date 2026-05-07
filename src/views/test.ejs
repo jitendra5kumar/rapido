@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Socket + FCM Test Panel</title>
+
+  <!-- Socket -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-6 rounded-2xl shadow-xl w-[420px]">
+
+  <h1 class="text-2xl font-bold mb-4 text-center">
+    🚗 Socket + 🔔 FCM Test
+  </h1>
+
+  <input id="driverId" class="w-full border p-2 rounded mb-3" placeholder="Driver ID" />
+
+  <!-- SOCKET -->
+  <button onclick="connectSocket()" class="bg-blue-500 text-white px-3 py-2 rounded w-full mb-2">
+    Connect Socket
+  </button>
+
+  <div class="flex gap-2 mb-3">
+    <button onclick="online()" class="bg-green-500 text-white px-3 py-2 rounded w-full">
+      Online
+    </button>
+    <button onclick="offline()" class="bg-red-500 text-white px-3 py-2 rounded w-full">
+      Offline
+    </button>
+  </div>
+
+  <!-- LOCATION -->
+  <input id="lat" class="w-full border p-2 rounded mb-2" placeholder="Latitude" />
+  <input id="lng" class="w-full border p-2 rounded mb-3" placeholder="Longitude" />
+
+  <button onclick="sendLocation()" class="bg-purple-500 text-white px-3 py-2 rounded w-full mb-3">
+    Send Location
+  </button>
+
+  <!-- FCM -->
+  <button onclick="generateFCM()" class="bg-yellow-500 text-white px-3 py-2 rounded w-full mb-3">
+    🔔 Generate FCM Token
+  </button>
+
+  <!-- LOG -->
+  <div class="bg-black text-green-400 p-2 h-40 overflow-y-auto text-sm rounded">
+    <div id="log"></div>
+  </div>
+
+</div>
+
+<script>
+let socket;
+
+// ===== LOG =====
+function log(msg) {
+  document.getElementById("log").innerHTML += msg + "<br/>";
+}
+
+// ===== SOCKET =====
+function connectSocket() {
+  socket = io("http://localhost:5000");
+
+  socket.on("connect", () => {
+    log("✅ Socket Connected: " + socket.id);
+  });
+
+  socket.on("disconnect", () => {
+    log("❌ Socket Disconnected");
+  });
+}
+
+function online() {
+  const driverId = document.getElementById("driverId").value;
+
+  socket.emit("driver_online", { driverId });
+  log("🚗 Online sent");
+}
+
+function offline() {
+  const driverId = document.getElementById("driverId").value;
+
+  socket.emit("driver_offline", { driverId });
+  log("🛑 Offline sent");
+}
+
+function sendLocation() {
+  const driverId = document.getElementById("driverId").value;
+  const lat = document.getElementById("lat").value;
+  const lng = document.getElementById("lng").value;
+
+  socket.emit("driver_location", {
+    driverId,
+    lat: parseFloat(lat),
+    lng: parseFloat(lng)
+  });
+
+  log("📍 Location sent");
+}
+
+// ===== FIREBASE CONFIG =====
+// 🔥 YAHAN APNA CONFIG DALNA
+const firebaseConfig = {
+  apiKey: "AIzaSyB1gXXjITXl6N19f-ofrgdw6_UP7tsQswU",
+  authDomain: "rapido-142ca.firebaseapp.com",
+  projectId: "rapido-142ca",
+  messagingSenderId: "943361722083",
+  appId: "1:943361722083:web:15fc91340148ed38b2a7d6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+// ===== GENERATE FCM TOKEN =====
+async function generateFCM() {
+  try {
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      log("❌ Notification permission denied");
+      return;
+    }
+
+    const token = await messaging.getToken({
+      vapidKey: "BDER4Enfeco5eyKb50pc10GTLtg-BKUCFp_DXdKVw93lNgKcnwXFAt4ZxXqEOwgjsfpJ3DkOjwagpQNwwbEYs7k" // 🔥 MUST ADD
+    });
+
+    log("🔥 FCM Token: " + token);
+
+    // 👉 BACKEND KO SAVE KARO
+    await fetch("/save-fcm-token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        fcm_token: token
+      })
+    });
+
+    log("✅ Token saved to backend");
+
+  } catch (err) {
+    log("❌ FCM error: " + err.message);
+  }
+}
+</script>
+
+</body>
+</html>

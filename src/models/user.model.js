@@ -19,10 +19,6 @@ const userSchema = new mongoose.Schema(
       type: Date,
     },
 
-    country_code: {
-      type: String,
-      default: "+91",
-    },
 
     phone: {
       type: String,
@@ -37,9 +33,7 @@ const userSchema = new mongoose.Schema(
     },
 
     // ⚠️ avoid in production
-    plain_password: {
-      type: String,
-    },
+
 
     gender: {
       type: String,
@@ -47,8 +41,7 @@ const userSchema = new mongoose.Schema(
     },
 
     profile_image_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "File",
+     type:String
     },
 
     firebase_uid: {
@@ -118,17 +111,18 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    aadhaar_number: String,
-    pan_number: String,
-    rc_number: String,
-    dl_number: String,
-    insurance_policy_number: String,
+
 
     role: {
       type: String,
       enum: ["rider", "driver", "admin", "sub_admin"],
       default: "rider",
     },
+    wallet: {
+      type: Number,
+      default: 0,
+    },
+
   },
   {
     timestamps: true,

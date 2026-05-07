@@ -26,3 +26,22 @@ export const register = asyncHandler(async (req, res) => {
   const result = await authService.register(phone, name, password);
   response.success(res, 'Registration successful', result);
 });
+
+
+export const saveFcmToken = async (req, res) => {
+  try {
+    const userId = req.user.id; // auth se aayega
+    const { fcm_token } = req.body;
+
+    await User.findByIdAndUpdate(userId, {
+      fcm_token
+    });
+
+    res.json({
+      success: true,
+      message: "Token saved"
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

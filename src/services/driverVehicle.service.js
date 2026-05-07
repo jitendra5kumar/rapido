@@ -1,4 +1,4 @@
-import DriverVehicle from "../models/driverVehicle.model.js";
+import DriverVehicle from "../models/driver.model.js";
 
 export const createOrUpdateVehicle = async (user_id, payload) => {
   const vehicle = await DriverVehicle.findOneAndUpdate(
