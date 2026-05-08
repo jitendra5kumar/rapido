@@ -10,6 +10,9 @@ import {
   setDriverBusyStatus,
 } from '../services/driverLocation.service.js';
 
+import { initChatSocket } from './chat.socket.js';
+import { initAdminChatSocket } from './adminChat.socket.js';
+
 const DRIVER_HEARTBEAT_TTL = 15;
 
 const setupSockets = (server) => {
@@ -18,6 +21,10 @@ const setupSockets = (server) => {
 
   // Make globally accessible
   global.io = io;
+
+  // Initialize chat sockets
+  initChatSocket(io);
+  initAdminChatSocket(io);
 
   io.on('connection', (socket) => {
 

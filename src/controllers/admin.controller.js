@@ -1,5 +1,6 @@
 import * as adminService from '../services/admin.service.js';
 import { asyncHandler, response } from '../utils/index.js';
+import { getChatNotifications, sendSubAdminReply } from '../services/chat-notification.service.js';
 
 export const createSubAdmin = asyncHandler(async (req, res) => {
   const { name, phone, password, email } = req.body;
@@ -67,4 +68,47 @@ export const updateUserStatus = asyncHandler(async (req, res) => {
   const result = await adminService.updateUserStatus(userId, status);
 
   return response.success(res, result.message, result);
+});
+
+// =====================================================
+// CHAT MANAGEMENT ENDPOINTS
+// =====================================================
+
+export const getChatDashboard = asyncHandler(async (req, res) => {
+  const adminId = req.user?._id;
+  const { page = 1, limit = 20 } = req.query;
+
+  const chatData = await getChatNotifications(
+    adminId,
+    parseInt(page),
+    parseInt(limit)
+  );
+
+  return response.success(
+    res,
+    'Chat dashboard fetched successfully',
+    chatData
+  );
+});
+
+export const respondToChat = asyncHandler(async (req, res) => {
+  const { chatId } = req.params;
+  const { message } = req.body;
+  const adminId = req.user?._id;
+
+  if (!message || message.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Reply message is required',
+    });
+  }
+
+  const updatedChat = await sendSubAdminReply(chatId, adminId, message);
+
+  return response.success(
+    res,
+    'Reply sent successfully',
+    updatedChat,
+    201
+  );
 });
