@@ -2,141 +2,353 @@ import crypto from "crypto";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import otpCache from "../cache/otp.cache.js";
 
 // 🎯 referral code generator
 const generateReferralCode = () => {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
 };
 
+// ==============================
+// SEND OTP
+// ==============================
+export const sendOtp = async (
+    phone,
+    name,
+    password,
+    email = null,
+    referral_code = null
+) => {
+
+    if (!phone) {
+        throw new Error("Phone number is required");
+    }
+
+    // ✅ Indian mobile validation
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+        throw new Error("Invalid phone number");
+    }
+
+    // ✅ existing user check
+    const existingUser = await User.findOne({ phone });
+
+    if (existingUser) {
+        throw new Error("Phone already registered");
+    }
+
+    // ✅ OTP resend protection
+    const existingOtp = await otpCache.getOtp(phone);
+
+    if (existingOtp) {
+        throw new Error("OTP already sent. Please wait 60 seconds");
+    }
+
+    // ✅ Sub admin referral code required
+    if (!referral_code) {
+        throw new Error("Sub admin referral code is required");
+    }
+
+    // ✅ Validate sub admin referral code
+    const subAdmin = await User.findOne({
+        referral_code,
+        role: "sub_admin",
+    });
+
+    if (!subAdmin) {
+        throw new Error("Invalid sub admin referral code");
+    }
+
+    // ✅ generate otp
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // ✅ save otp
+    await otpCache.setOtp(phone, otp, 60);
+
+    // ✅ save temporary data
+    await otpCache.setData(
+        phone,
+        {
+            name,
+            password,
+            email,
+            referred_by_id: subAdmin._id,
+        },
+        300
+    );
+
+    console.log(`OTP for ${phone}: ${otp}`);
+
+    return {
+        success: true,
+        message: "OTP sent successfully",
+        phone,
+    };
+};
+
+// ==============================
+// VERIFY OTP
+// ==============================
 export const verifyOtp = async (phone, otp) => {
+
     const storedOtp = await otpCache.getOtp(phone);
 
     if (!storedOtp || storedOtp !== otp) {
         throw new Error("Invalid or expired OTP");
     }
 
+    // ✅ get temp user data
     const userData = await otpCache.getData(phone);
 
     if (!userData) {
         throw new Error("User data not found");
     }
 
+    // ✅ cleanup
     await otpCache.deleteOtp(phone);
     await otpCache.deleteData(phone);
 
+    // ✅ check existing user
     let user = await User.findOne({ phone });
 
     if (!user) {
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-        // 🔥 unique referral code generate
+        const hashedPassword = await bcrypt.hash(
+            userData.password,
+            10
+        );
+
+        // ✅ unique referral code generation
         let referral_code;
         let isUnique = false;
 
         while (!isUnique) {
+
             referral_code = generateReferralCode();
-            const exists = await User.findOne({ referral_code });
-            if (!exists) isUnique = true;
+
+            const exists = await User.findOne({
+                referral_code,
+            });
+
+            if (!exists) {
+                isUnique = true;
+            }
         }
 
+        // ✅ create driver
         user = await User.create({
             name: userData.name,
             phone,
             password: hashedPassword,
             email: userData.email || null,
+
             role: "driver",
-            referral_code, // ✅ added here
+
+            referral_code, // driver's own code
+
+            referred_by_id: userData.referred_by_id, // linked sub admin
         });
     }
 
+    // ✅ generate token
     const token = jwt.sign(
-        { id: user._id, phone: user.phone, role: user.role },
+        {
+            id: user._id,
+            phone: user.phone,
+            role: user.role,
+        },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        {
+            expiresIn: "7d",
+        }
     );
 
     return {
+        success: true,
         token,
+
         user: {
             id: user._id,
             name: user.name,
+            email: user.email,
             phone: user.phone,
             role: user.role,
-            referral_code: user.referral_code, // optional but useful
+            referral_code: user.referral_code,
+            referred_by_id: user.referred_by_id,
         },
     };
 };
 
+// ==============================
+// CREATE DRIVER DIRECTLY
+// ==============================
 export const createDriverService = async (payload) => {
-    const { name, phone, password, email } = payload;
 
+    const {
+        name,
+        phone,
+        password,
+        email,
+        referral_code,
+    } = payload;
+
+    // ✅ check existing
     const existing = await User.findOne({
         $or: [
             { phone },
-            ...(email ? [{ email }] : [])
-        ]
+            ...(email ? [{ email }] : []),
+        ],
     });
 
     if (existing) {
+
         if (existing.phone === phone) {
             throw new Error("Phone already exists");
         }
+
         if (email && existing.email === email) {
             throw new Error("Email already exists");
         }
     }
 
+    // ✅ validate sub admin code
+    if (!referral_code) {
+        throw new Error("Sub admin referral code is required");
+    }
+
+    const subAdmin = await User.findOne({
+        referral_code,
+        role: "sub_admin",
+    });
+
+    if (!subAdmin) {
+        throw new Error("Invalid sub admin referral code");
+    }
+
+    // ✅ hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ✅ generate unique driver referral code
+    let driverReferralCode;
+    let isUnique = false;
+
+    while (!isUnique) {
+
+        driverReferralCode = generateReferralCode();
+
+        const exists = await User.findOne({
+            referral_code: driverReferralCode,
+        });
+
+        if (!exists) {
+            isUnique = true;
+        }
+    }
+
+    // ✅ create driver
     const driver = await User.create({
         name,
         phone,
         email,
         password: hashedPassword,
+
         role: "driver",
+
+        referral_code: driverReferralCode,
+
+        referred_by_id: subAdmin._id,
     });
 
     return driver;
 };
 
-export const loginDriverService = async ({ phone, password }) => {
-    const user = await User.findOne({ phone, role: "driver" });
-    if (!user) throw new Error("Invalid credentials");
+// ==============================
+// LOGIN DRIVER
+// ==============================
+export const loginDriverService = async ({
+    phone,
+    password,
+}) => {
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new Error("Wrong password");
+    const user = await User.findOne({
+        phone,
+        role: "driver",
+    });
 
-    const token = jwt.sign(
-        { id: user._id },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+    if (!user) {
+        throw new Error("Invalid credentials");
+    }
+
+    const isMatch = await bcrypt.compare(
+        password,
+        user.password
     );
 
-    return { user, token };
+    if (!isMatch) {
+        throw new Error("Wrong password");
+    }
+
+    const token = jwt.sign(
+        {
+            id: user._id,
+            phone: user.phone,
+            role: user.role,
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "7d",
+        }
+    );
+
+    return {
+        user,
+        token,
+    };
 };
 
+// ==============================
+// GET PROFILE
+// ==============================
 export const getProfileService = async (userId) => {
+
     const user = await User.findById(userId)
         .populate("profile_image_id")
-        .populate("service_id service_category_id");
+        .populate("service_id service_category_id")
+        .populate("referred_by_id");
 
-    if (!user) throw new Error("User not found");
+    if (!user) {
+        throw new Error("User not found");
+    }
 
     return user;
 };
 
-export const updateProfileService = async (userId, updates) => {
+// ==============================
+// UPDATE PROFILE
+// ==============================
+export const updateProfileService = async (
+    userId,
+    updates
+) => {
+
     delete updates.password;
     delete updates.role;
 
-    const user = await User.findByIdAndUpdate(userId, updates, {
-        new: true,
-    });
+    const user = await User.findByIdAndUpdate(
+        userId,
+        updates,
+        {
+            new: true,
+        }
+    );
 
     return user;
 };
 
+// ==============================
+// LOGOUT
+// ==============================
 export const logoutService = async (userId) => {
+
     await User.findByIdAndUpdate(userId, {
         fcm_token: null,
         remember_token: null,
@@ -144,38 +356,4 @@ export const logoutService = async (userId) => {
     });
 
     return true;
-};
-
-export const sendOtp = async (phone, name, password, email = null) => {
-    if (!phone) {
-        throw new Error("Phone number is required");
-    }
-
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-        throw new Error("Invalid phone number");
-    }
-
-    const existingOtp = await otpCache.getOtp(phone);
-    if (existingOtp) {
-        throw new Error("OTP already sent. Please wait 60 seconds");
-    }
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    await otpCache.setOtp(phone, otp, 60);
-
-    await otpCache.setData(
-        phone,
-        { name, password, email },
-        300
-    );
-
-    console.log(`OTP for ${phone}: ${otp}`);
-
-    return {
-        message: "OTP sent successfully",
-        phone,
-    };
-};
-
-
+}

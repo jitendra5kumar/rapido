@@ -75,10 +75,7 @@ const userSchema = new mongoose.Schema(
       ref: "User",
     },
 
-    created_by_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+
 
     fcm_token: {
       type: String,

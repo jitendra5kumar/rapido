@@ -12,6 +12,9 @@ import driverdocRoutes from './driverDocument.route.js'
 import DriverVehicle from "./driverVehicle.route.js"
 import Notification  from './notification.routes.js';
 import walletRoutes  from './wallet.route.js';
+import commissionROute from './commissionRoutes.js';
+import configRoutes from  './config.routes.js'
+
 
 
 const router = express.Router();
@@ -30,6 +33,8 @@ router.use("/driver-doc", driverdocRoutes)
 router.use("/driver-vehicle", DriverVehicle)
 router.use("/notifications", Notification)
 router.use("/wallet", walletRoutes)
+router.use("/commission", commissionROute)
+router.use('/config',configRoutes)
 
 
 

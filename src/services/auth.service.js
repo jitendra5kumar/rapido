@@ -113,15 +113,35 @@ export const login = async (phone, password) => {
   return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
 };
 
-export const register = async (phone, name, password, role = 'rider') => {
+export const register = async (
+  phone,
+  name,
+  password,
+  role = "rider"
+) => {
   // Check if user already exists
   const existingUser = await User.findOne({ phone });
+
   if (existingUser) {
-    throw new Error('User already registered with this phone number');
+    throw new Error("User already registered with this phone number");
   }
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
+
+  // 🔥 Generate unique referral code
+  let referralCode;
+  let isUnique = false;
+
+  while (!isUnique) {
+    referralCode = generateReferralCode();
+
+    const exists = await User.findOne({
+      referral_code: referralCode,
+    });
+
+    if (!exists) isUnique = true;
+  }
 
   // Create new user
   const user = await new User({
@@ -129,14 +149,28 @@ export const register = async (phone, name, password, role = 'rider') => {
     phone,
     password: hashedPassword,
     role,
+    referral_code: referralCode, // ✅ added
   }).save();
 
   // Generate JWT
-  const token = jwt.generateToken({ id: user._id, phone: user.phone, role: user.role });
+  const token = jwt.generateToken({
+    id: user._id,
+    phone: user.phone,
+    role: user.role,
+  });
 
   // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
 
-  return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
+  return {
+    token,
+    user: {
+      id: user._id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      referral_code: user.referral_code, // ✅ return also
+    },
+  };
 };
 
