@@ -1,10 +1,11 @@
 import Alert from '../models/alert.model.js';
 
-export const createAlert = async (userId, { title, message, image, userType = 'ALL', users, status = 'ACTIVE', isBroadcast = true }) => {
+export const createAlert = async (userId, { title, message, image, linkUrl, userType = 'ALL', users, status = 'ACTIVE', isBroadcast = true }) => {
   const alert = await new Alert({
     title,
     message,
     image,
+    linkUrl,
     userType,
     users,
     createdBy: userId,
@@ -15,7 +16,7 @@ export const createAlert = async (userId, { title, message, image, userType = 'A
   return alert.populate('createdBy users');
 };
 
-export const updateAlert = async (alertId, userId, { title, message, image, userType, users, status, isBroadcast }) => {
+export const updateAlert = async (alertId, userId, { title, message, image, linkUrl, userType, users, status, isBroadcast }) => {
   const alert = await Alert.findById(alertId);
   if (!alert) {
     throw new Error('Alert not found');
@@ -29,6 +30,7 @@ export const updateAlert = async (alertId, userId, { title, message, image, user
   if (title) alert.title = title;
   if (message) alert.message = message;
   if (image) alert.image = image;
+  if (linkUrl) alert.linkUrl = linkUrl;
   if (userType) alert.userType = userType;
   if (users) alert.users = users;
   if (status) alert.status = status;

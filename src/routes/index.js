@@ -19,6 +19,8 @@ import couponRoutes from './coupon.routes.js';
 import DriverVehicle from "./driverVehicle.route.js"
 import Notification  from './notification.routes.js';
 import walletRoutes  from './wallet.route.js';
+import chatRoutes from './chat.routes.js';
+import adminChatRoutes from './adminChat.routes.js';
 
 
 const router = express.Router();
@@ -46,6 +48,8 @@ router.use('/driver-vehicle', DriverVehicle)
 router.use('/notifications', Notification)
 router.use('/wallet', walletRoutes)
 router.use('/driver-reports', driverReportRoutes)
+router.use('/chat', chatRoutes)
+router.use('/admin-chat', adminChatRoutes)
 
 
 

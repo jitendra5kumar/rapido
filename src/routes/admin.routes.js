@@ -32,6 +32,10 @@ router.post('/reset-password',  resetUserPasswordValidator,  handleValidationErr
 
 router.post('/update-user-status',  updateUserStatusValidator,  handleValidationErrors, adminController.updateUserStatus);
 
+// Chat Management Routes
+router.get('/chats', adminController.getChatDashboard);
+
+router.post('/chats/:chatId/reply', adminController.respondToChat);
 
 
 export default router;

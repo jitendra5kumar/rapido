@@ -15,6 +15,11 @@ const alertSchema = new mongoose.Schema(
     image: {
       type: String, 
     },
+
+    linkUrl: {
+      type: String,
+      trim: true,
+    },
   
     userType: {
       type: String,

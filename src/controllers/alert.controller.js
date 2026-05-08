@@ -3,13 +3,14 @@ import { asyncHandler } from '../utils/index.js';
 import { response } from '../utils/index.js';
 
 export const createAlert = asyncHandler(async (req, res) => {
-  const { title, message, image, userType, users, status, isBroadcast } = req.body;
+  const { title, message, image, linkUrl, userType, users, status, isBroadcast } = req.body;
   const userId = req.user.id;
 
   const alert = await alertService.createAlert(userId, {
     title,
     message,
     image,
+    linkUrl,
     userType,
     users,
     status,
@@ -21,13 +22,14 @@ export const createAlert = asyncHandler(async (req, res) => {
 
 export const updateAlert = asyncHandler(async (req, res) => {
   const { alertId } = req.params;
-  const { title, message, image, userType, users, status, isBroadcast } = req.body;
+  const { title, message, image, linkUrl, userType, users, status, isBroadcast } = req.body;
   const userId = req.user.id;
 
   const alert = await alertService.updateAlert(alertId, userId, {
     title,
     message,
     image,
+    linkUrl,
     userType,
     users,
     status,
