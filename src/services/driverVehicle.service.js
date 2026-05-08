@@ -1,8 +1,8 @@
-import DriverVehicle from "../models/driver.model.js";
+import Driver from "../models/driver.model.js";
 
 export const createOrUpdateVehicle = async (user_id, payload) => {
-  const vehicle = await DriverVehicle.findOneAndUpdate(
-    { user_id },
+  const vehicle = await Driver.findOneAndUpdate(
+    { userId: user_id },
     {
       $set: payload,
     },
@@ -18,18 +18,18 @@ export const createOrUpdateVehicle = async (user_id, payload) => {
 
 
 export const updateVehicleStatus = async (vehicle_id, admin_id, status) => {
-  const vehicle = await DriverVehicle.findById(vehicle_id);
+  const vehicle = await Driver.findById(vehicle_id);
 
   if (!vehicle) {
     throw new Error("Vehicle not found");
   }
 
   vehicle.status = status;
-  vehicle.verified_by = admin_id;
+  vehicle.verifiedBy = admin_id;
 
   // 👉 auto offline if rejected
   if (status !== "approved") {
-    vehicle.is_online = false;
+    vehicle.isOnline = false;
   }
 
   await vehicle.save();

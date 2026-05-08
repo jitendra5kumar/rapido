@@ -1,6 +1,8 @@
 import * as authService from '../services/auth.service.js';
-import {asyncHandler } from '../utils/index.js';
-import {response } from '../utils/index.js';
+import { cacheFcmToken } from '../services/notification.service.js';
+import User from '../models/user.model.js';
+import { asyncHandler } from '../utils/index.js';
+import { response } from '../utils/index.js';
 
 export const sendOtp = asyncHandler(async (req, res) => {
   const { phone, name, password } = req.body;
@@ -30,18 +32,42 @@ export const register = asyncHandler(async (req, res) => {
 
 export const saveFcmToken = async (req, res) => {
   try {
-    const userId = req.user.id; // auth se aayega
+    const userId = req.user.id;
     const { fcm_token } = req.body;
 
+    if (!fcm_token) {
+      return res.status(400).json({
+        success: false,
+        message: 'FCM token is required',
+      });
+    }
+
     await User.findByIdAndUpdate(userId, {
-      fcm_token
+      fcm_token,
+    });
+
+    await cacheFcmToken({
+      targetType: 'user',
+      targetId: userId,
+      token: fcm_token,
     });
 
     res.json({
       success: true,
-      message: "Token saved"
+      message: 'Token saved',
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const result = await authService.changePassword(req.user.id, {
+    currentPassword,
+    newPassword,
+  });
+
+  return response.success(res, result.message, result);
+});

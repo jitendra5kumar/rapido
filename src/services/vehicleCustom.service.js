@@ -17,7 +17,7 @@ export const createVehicleCustom = async (userId, { categoryId, baseAmount, char
     status,
   }).save();
 
-  return vehicleCustom.populate('categoryId createdBy');
+  return vehicleCustom;
 };
 
 export const updateVehicleCustom = async (vehicleCustomId, userId, userRole, updates) => {
@@ -38,7 +38,7 @@ export const updateVehicleCustom = async (vehicleCustomId, userId, userRole, upd
   Object.assign(vehicleCustom, updates);
   await vehicleCustom.save();
 
-  return vehicleCustom.populate('categoryId createdBy');
+  return vehicleCustom;
 };
 
 export const getVehicleCustomById = async (vehicleCustomId) => {
@@ -53,10 +53,10 @@ export const getAllVehicleCustoms = async (filters = {}) => {
   const query = {};
   if (filters.categoryId) query.categoryId = filters.categoryId;
   if (typeof filters.status !== 'undefined') query.status = filters.status;
-
   const items = await VehicleCustom.find(query)
-    .populate('categoryId createdBy')
-    .sort({ createdAt: -1 });
+  .populate('categoryId', 'name')
+  .populate('createdBy', 'name')
+  .sort({ createdAt: -1 });
 
   return items;
 };

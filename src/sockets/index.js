@@ -1,114 +1,433 @@
-import ioLoader from "../config/socket.js";
-import User from "../models/user.model.js";
+// sockets/index.js
+
+import ioLoader from '../config/socket.js';
+
+import redis from '../config/redis.js';
+
+import {
+  updateDriverLocation,
+  removeDriverLocation,
+  setDriverBusyStatus,
+} from '../services/driverLocation.service.js';
+
+const DRIVER_HEARTBEAT_TTL = 15;
 
 const setupSockets = (server) => {
+
   const io = ioLoader(server);
 
-  io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+  // Make globally accessible
+  global.io = io;
 
-    // =========================
-    // 🔥 DRIVER ONLINE
-    // =========================
-    socket.on("driver_online", async (data) => {
-      try {
-        const { driverId } = data;
+  io.on('connection', (socket) => {
 
-        if (!driverId) return;
+    console.log(
+      `Socket connected: ${socket.id}`
+    );
 
-        console.log("driver_online:", driverId);
+    // =====================================================
+    // JOIN USER ROOM
+    // =====================================================
 
+    socket.on(
+      'join',
 
-        socket.driverId = driverId;
+      async (data = {}) => {
 
-        await User.findByIdAndUpdate(driverId, {
-          is_online: true,
-        });
+        try {
 
-        console.log("Driver ONLINE:", driverId);
-      } catch (err) {
-        console.log("driver_online error:", err.message);
-      }
-    });
+          const {
+            userId,
+            role,
+          } = data;
 
-    // =========================
-    // 🔥 DRIVER OFFLINE
-    // =========================
-    socket.on("driver_offline", async (data) => {
-      try {
-        const { driverId } = data;
+          if (!userId) {
+            return;
+          }
 
-        if (!driverId) return;
+          socket.userId =
+            userId.toString();
 
-        await User.findByIdAndUpdate(driverId, {
-          is_online: false,
-        });
+          socket.role = role;
 
-        console.log("Driver OFFLINE:", driverId);
-      } catch (err) {
-        console.log("driver_offline error:", err.message);
-      }
-    });
+          // User personal room
+          socket.join(
+            userId.toString()
+          );
 
-    // =========================
-    // 🚕 JOIN RIDE
-    // =========================
-    socket.on("join-ride", (rideId) => {
-      socket.join(`ride-${rideId}`);
-      console.log("Joined ride:", rideId);
-    });
+          // Store socket mapping
+          await redis.set(
+            `socket:${userId}`,
+            socket.id,
+            'EX',
+            86400
+          );
 
-    // =========================
-    // 🚕 LEAVE RIDE
-    // =========================
-    socket.on("leave-ride", (rideId) => {
-      socket.leave(`ride-${rideId}`);
-      console.log("Left ride:", rideId);
-    });
+          // DRIVER ONLINE
+          if (role === 'driver') {
 
-    // =========================
-    // 📍 DRIVER LOCATION UPDATE
-    // =========================
-    socket.on("driver_location", async (data) => {
-      try {
-        const { driverId, lat, lng } = data;
+            socket.driverId =
+              userId.toString();
 
-        if (!driverId || !lat || !lng) return;
+            // Redis online
+            await redis.sadd(
+              'drivers:online',
+              userId.toString()
+            );
 
-        await User.findByIdAndUpdate(driverId, {
-          location: {
-            type: "Point",
-            coordinates: [lng, lat],
-          },
-        });
-      } catch (err) {
-        console.log("location error:", err.message);
-      }
-    });
+            // Heartbeat
+            await redis.set(
+              `driver:lastSeen:${userId}`,
+              Date.now(),
+              'EX',
+              DRIVER_HEARTBEAT_TTL
+            );
 
-    // =========================
-    // ❌ DISCONNECT
-    // =========================
-    socket.on("disconnect", async () => {
-      try {
-        console.log("User disconnected:", socket.id);
+            console.log(
+              `Driver online: ${userId}`
+            );
+          }
 
-        if (socket.driverId) {
-          await User.findByIdAndUpdate(socket.driverId, {
-            is_online: false,
-          });
+        } catch (err) {
 
-          console.log("Auto OFFLINE:", socket.driverId);
+          console.error(
+            'join error:',
+            err.message || err
+          );
         }
-      } catch (err) {
-        console.log("disconnect error:", err.message);
       }
-    });
+    );
 
-    // 🔥 DEBUG (VERY IMPORTANT)
-    socket.onAny((event, data) => {
-      console.log("EVENT:", event, data);
-    });
+    // =====================================================
+    // HEARTBEAT
+    // =====================================================
+
+    socket.on(
+      'heartbeat',
+
+      async () => {
+
+        try {
+
+          if (
+            !socket.driverId
+          ) {
+            return;
+          }
+
+          await redis.set(
+            `driver:lastSeen:${socket.driverId}`,
+
+            Date.now(),
+
+            'EX',
+            DRIVER_HEARTBEAT_TTL
+          );
+
+        } catch (err) {
+
+          console.error(
+            'heartbeat error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // DRIVER LOCATION UPDATE
+    // =====================================================
+
+    socket.on(
+      'driver:location',
+
+      async (data = {}) => {
+
+        try {
+
+          const {
+            lat,
+            lng,
+          } = data;
+
+          const driverId =
+            socket.driverId;
+
+          if (
+            !driverId ||
+            lat === undefined ||
+            lng === undefined
+          ) {
+            return;
+          }
+
+          // Update realtime location
+          await updateDriverLocation(
+            driverId,
+            {
+              lat,
+              lng,
+            }
+          );
+
+          // Optional:
+          // Emit live location to active rides
+
+          if (
+            socket.activeRideId
+          ) {
+
+            io.to(
+              `ride:${socket.activeRideId}`
+            ).emit(
+              'driver:location',
+              {
+                driverId,
+                lat,
+                lng,
+              }
+            );
+          }
+
+        } catch (err) {
+
+          console.error(
+            'driver location error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // JOIN RIDE ROOM
+    // =====================================================
+
+    socket.on(
+      'ride:join',
+
+      async (rideId) => {
+
+        try {
+
+          if (!rideId) {
+            return;
+          }
+
+          socket.activeRideId =
+            rideId.toString();
+
+          socket.join(
+            `ride:${rideId}`
+          );
+
+          console.log(
+            `Socket joined ride room ${rideId}`
+          );
+
+        } catch (err) {
+
+          console.error(
+            'ride join error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // LEAVE RIDE ROOM
+    // =====================================================
+
+    socket.on(
+      'ride:leave',
+
+      async (rideId) => {
+
+        try {
+
+          if (!rideId) {
+            return;
+          }
+
+          socket.leave(
+            `ride:${rideId}`
+          );
+
+          if (
+            socket.activeRideId ===
+            rideId.toString()
+          ) {
+            socket.activeRideId =
+              null;
+          }
+
+          console.log(
+            `Socket left ride room ${rideId}`
+          );
+
+        } catch (err) {
+
+          console.error(
+            'ride leave error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // DRIVER OFFLINE
+    // =====================================================
+
+    socket.on(
+      'driver:offline',
+
+      async () => {
+
+        try {
+
+          if (
+            !socket.driverId
+          ) {
+            return;
+          }
+
+          await removeDriverLocation(
+            socket.driverId
+          );
+
+          await redis.srem(
+            'drivers:online',
+            socket.driverId
+          );
+
+          await redis.del(
+            `driver:lastSeen:${socket.driverId}`
+          );
+
+          console.log(
+            `Driver offline: ${socket.driverId}`
+          );
+
+        } catch (err) {
+
+          console.error(
+            'driver offline error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // DRIVER BUSY STATUS
+    // =====================================================
+
+    socket.on(
+      'driver:busy',
+
+      async (busy) => {
+
+        try {
+
+          if (
+            !socket.driverId
+          ) {
+            return;
+          }
+
+          await setDriverBusyStatus(
+            socket.driverId,
+            !!busy
+          );
+
+        } catch (err) {
+
+          console.error(
+            'driver busy error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // DISCONNECT
+    // =====================================================
+
+    socket.on(
+      'disconnect',
+
+      async () => {
+
+        try {
+
+          console.log(
+            `Socket disconnected: ${socket.id}`
+          );
+
+          if (
+            socket.driverId
+          ) {
+
+            // Remove driver realtime presence
+            await removeDriverLocation(
+              socket.driverId
+            );
+
+            await redis.srem(
+              'drivers:online',
+              socket.driverId
+            );
+
+            await redis.del(
+              `driver:lastSeen:${socket.driverId}`
+            );
+
+            console.log(
+              `Driver auto offline: ${socket.driverId}`
+            );
+          }
+
+          // Remove socket mapping
+          if (
+            socket.userId
+          ) {
+            await redis.del(
+              `socket:${socket.userId}`
+            );
+          }
+
+        } catch (err) {
+
+          console.error(
+            'disconnect error:',
+            err.message || err
+          );
+        }
+      }
+    );
+
+    // =====================================================
+    // DEBUG
+    // =====================================================
+
+    if (
+      process.env.NODE_ENV !==
+      'production'
+    ) {
+
+      socket.onAny(
+        (event, data) => {
+
+          console.log(
+            `Socket event: ${event}`,
+            data
+          );
+        }
+      );
+    }
   });
 
   return io;

@@ -4,7 +4,7 @@ const vehicleCustomSchema = new mongoose.Schema(
   {
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category", // vehicle category (e.g., Sedan, SUV)
+      ref: "VehicleType", // vehicle category (e.g., Sedan, SUV)
       required: true,
       index: true
     },

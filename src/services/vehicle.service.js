@@ -10,12 +10,12 @@ export const createVehicle = async (data, files) => {
   let icon = null;
 
   // IMAGE UPLOAD FIX (safe check)
-  if (files?.vehicle_image?.[0]) {
-    image = await uploadToImgBB(files.vehicle_image[0].buffer);
+  if (files?.vehicleImage?.[0]) {
+    image = await uploadToImgBB(files.vehicleImage[0].buffer);
   }
 
-  if (files?.vehicle_map_icon?.[0]) {
-    icon = await uploadToImgBB(files.vehicle_map_icon[0].buffer);
+  if (files?.vehicleMapIcon?.[0]) {
+    icon = await uploadToImgBB(files.vehicleMapIcon[0].buffer);
   }
 
   // SLUG FIX
@@ -27,30 +27,30 @@ export const createVehicle = async (data, files) => {
     name: data.name,
     slug,
 
-    vehicle_image: image,
-    vehicle_map_icon: icon,
+    vehicleImage: image,
+    vehicleMapIcon: icon,
 
-    service_id: data.service_id,
-    max_seat: Number(data.max_seat),
+    serviceId: data.serviceId,
+    maxSeat: Number(data.maxSeat),
 
-    base_amount: Number(data.base_amount),
+    baseAmount: Number(data.baseAmount),
 
-    per_unit_charge: Number(data.per_unit_charge),
+    perUnitCharge: Number(data.perUnitCharge),
 
-    per_min_charge: Number(data.per_min_charge),
+    perMinuteCharge: Number(data.perMinuteCharge),
 
-    per_weight_charge: Number(data.per_weight_charge),
+    perWeightCharge: Number(data.perWeightCharge),
 
-    cancellation_charge: Number(data.cancellation_charge),
-    waiting_time_charge: Number(data.waiting_time_charge),
+    cancellationCharge: Number(data.cancellationCharge),
+    waitingTimeCharge: Number(data.waitingTimeCharge),
 
-    is_all_zones: data.is_all_zones === "true" || data.is_all_zones === true,
+    isAllZones: data.isAllZones === "true" || data.isAllZones === true,
 
-    commission_type: data.commission_type,
-    commission_rate: Number(data.commission_rate),
+    commissionType: data.commissionType,
+    commissionRate: Number(data.commissionRate),
 
-    created_by_id: data.created_by_id,
-    tax_id: data.tax_id,
+    createdById: data.createdById,
+    taxId: data.taxId,
 
     status: data.status || "active",
   });
@@ -62,7 +62,7 @@ export const createVehicle = async (data, files) => {
  * GET ALL
  */
 export const getVehicles = async () => {
-  return await Vehicle.find({ deleted_at: null }).sort({ createdAt: -1 });
+  return await Vehicle.find({ deletedAt: null }).sort({ createdAt: -1 });
 };
 
 /**
@@ -87,31 +87,31 @@ export const updateVehicle = async (id, data, files) => {
   }
 
   // IMAGE UPDATE
-  if (files?.vehicle_image?.[0]) {
-    updateData.vehicle_image = await uploadToImgBB(
-      files.vehicle_image[0].buffer
+  if (files?.vehicleImage?.[0]) {
+    updateData.vehicleImage = await uploadToImgBB(
+      files.vehicleImage[0].buffer
     );
   }
 
-  if (files?.vehicle_map_icon?.[0]) {
-    updateData.vehicle_map_icon = await uploadToImgBB(
-      files.vehicle_map_icon[0].buffer
+  if (files?.vehicleMapIcon?.[0]) {
+    updateData.vehicleMapIcon = await uploadToImgBB(
+      files.vehicleMapIcon[0].buffer
     );
   }
 
   // SAFE NUMBER CONVERSION
   const numberFields = [
-    "max_seat",
-    "base_amount",
-    "per_unit_charge",
-    "max_per_unit_charge",
-    "per_min_charge",
-    "max_per_min_charge",
-    "per_weight_charge",
-    "max_per_weight_charge",
-    "cancellation_charge",
-    "waiting_time_charge",
-    "commission_rate",
+    "maxSeat",
+    "baseAmount",
+    "perUnitCharge",
+    "maxPerUnitCharge",
+    "perMinuteCharge",
+    "maxPerMinuteCharge",
+    "perWeightCharge",
+    "maxPerWeightCharge",
+    "cancellationCharge",
+    "waitingTimeCharge",
+    "commissionRate",
   ];
 
   numberFields.forEach((key) => {
@@ -121,13 +121,13 @@ export const updateVehicle = async (id, data, files) => {
   });
 
   // BOOLEAN FIX
-  if (data.is_all_zones !== undefined) {
-    updateData.is_all_zones =
-      data.is_all_zones === "true" || data.is_all_zones === true;
+  if (data.isAllZones !== undefined) {
+    updateData.isAllZones =
+      data.isAllZones === "true" || data.isAllZones === true;
   }
 
   // STRING FIELDS
-  ["service_id", "created_by_id", "tax_id", "commission_type", "status"].forEach(
+  ["serviceId", "createdById", "taxId", "commissionType", "status"].forEach(
     (key) => {
       if (data[key] !== undefined) {
         updateData[key] = data[key];
@@ -148,7 +148,7 @@ export const deleteVehicle = async (id) => {
   return await Vehicle.findByIdAndUpdate(
     id,
     {
-      deleted_at: new Date(),
+      deletedAt: new Date(),
       status: "inactive",
     },
     { new: true }

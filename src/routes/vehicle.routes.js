@@ -22,8 +22,8 @@ router.post(
   authMiddleware,
   rateLimitMiddleware,
   upload.fields([
-    { name: "vehicle_image", maxCount: 1 },
-    { name: "vehicle_map_icon", maxCount: 1 },
+    { name: "vehicleImage", maxCount: 1 },
+    { name: "vehicleMapIcon", maxCount: 1 },
   ]),
   createVehicleController
 );
@@ -47,8 +47,8 @@ router.put(
   rateLimitMiddleware,
   requireRoles('admin', 'sub_admin'),
   upload.fields([
-    { name: "vehicle_image", maxCount: 1 },
-    { name: "vehicle_map_icon", maxCount: 1 },
+    { name: "vehicleImage", maxCount: 1 },
+    { name: "vehicleMapIcon", maxCount: 1 },
   ]),
   updateVehicleController
 );
