@@ -24,6 +24,7 @@ src/
 
 ---
 
+
 ## 🗄️ Database Schema
 
 ### Chat Model
