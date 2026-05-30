@@ -4,13 +4,14 @@ import redis, {
   DRIVERS_GEO_KEY,
 } from '../config/redis.js';
 
-const DRIVER_HEARTBEAT_TTL = 15;
+const DRIVER_HEARTBEAT_TTL = 20 * 60; // 20 minutes
 
 const ONLINE_DRIVER_KEY = 'drivers:online';
 const BUSY_DRIVER_KEY = 'drivers:busy';
 // socket
 export const updateDriverLocation = async (
   driverId,
+  vehicleId,
   { lat, lng }
 ) => {
   if (
@@ -21,7 +22,6 @@ export const updateDriverLocation = async (
       'Latitude and longitude required'
     );
   }
-
   const pipeline = redis.pipeline();
 
   pipeline.geoadd(
@@ -42,7 +42,8 @@ export const updateDriverLocation = async (
     'EX',
     DRIVER_HEARTBEAT_TTL
   );
-
+console.log("vehicleId", vehicleId);
+await redis.set(`driver:vehicle:${driverId}`, vehicleId);
   await pipeline.exec();
 };
 // logout
@@ -92,6 +93,7 @@ export const findNearbyAvailableDrivers =
     latitude,
     radiusMeters = 3000,
     limit = 10,
+    vehicleId = null,
   }) => {
     const rawDrivers = await redis.call(
       'GEOSEARCH',
@@ -107,6 +109,7 @@ export const findNearbyAvailableDrivers =
       'COUNT',
       limit * 5
     );
+    
 console.log("rawDrivers", rawDrivers);
     if (
       !rawDrivers ||
@@ -125,6 +128,7 @@ console.log("rawDrivers", rawDrivers);
         isOnline,
         isBusy,
         lastSeen,
+        assignedVehicle,
       ] = await Promise.all([
         redis.sismember(
           ONLINE_DRIVER_KEY,
@@ -137,8 +141,12 @@ console.log("rawDrivers", rawDrivers);
         redis.get(
           `driver:lastSeen:${driverId}`
         ),
+        redis.get(
+          `driver:vehicle:${driverId}`
+        ),
       ]);
 
+console.log("object", isOnline, isBusy, lastSeen, driverId,);
       if (!isOnline) {
         continue;
       }
@@ -151,23 +159,28 @@ console.log("rawDrivers", rawDrivers);
         continue;
       }
 
+      if (vehicleId && assignedVehicle !== vehicleId) {
+        continue;
+      }
+
       const diff =
         Date.now() - Number(lastSeen);
 
-      if (diff > 15000) {
+      if (diff > DRIVER_HEARTBEAT_TTL * 1000) {
         continue;
       }
 
       result.push({
         driverId,
         distance: parseFloat(distance),
+        vehicleId: assignedVehicle,
       });
 
       if (result.length >= limit) {
         break;
       }
     }
-
+console.log("Available drivers with location:", result);
     return result;
   };
 
@@ -177,7 +190,7 @@ export const getDriverPositions = async (driverIds) => {
   }
 
   const positions = await redis.call(
-    'GEO_POS',
+    'GEOPOS',
     DRIVERS_GEO_KEY,
     ...driverIds
   );

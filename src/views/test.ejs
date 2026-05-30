@@ -69,40 +69,84 @@ function log(msg) {
 
 // ===== SOCKET =====
 function connectSocket() {
-  socket = io("http://localhost:5000");
+  if (socket && socket.connected) {
+    log("✅ Already connected: " + socket.id);
+    return;
+  }
+
+  const socketUrl = window.location.protocol === "file:"
+    ? "http://localhost:5000"
+    : window.location.origin;
+
+  log("🔌 Connecting socket to: " + socketUrl);
+
+  socket = io(socketUrl, {
+    transports: ["websocket", "polling"],
+  });
 
   socket.on("connect", () => {
     log("✅ Socket Connected: " + socket.id);
   });
 
-  socket.on("disconnect", () => {
-    log("❌ Socket Disconnected");
+  socket.on("disconnect", (reason) => {
+    log("❌ Socket Disconnected: " + reason);
+  });
+
+  socket.on("connect_error", (error) => {
+    log("⚠️ Socket connect error: " + error.message);
+  });
+
+  socket.on("reconnect_attempt", (attempt) => {
+    log("🔄 Reconnect attempt: " + attempt);
   });
 }
 
 function online() {
-  const driverId = document.getElementById("driverId").value;
+  const driverId = document.getElementById("driverId").value.trim();
 
-  socket.emit("driver_online", { driverId });
-  log("🚗 Online sent");
+  if (!driverId) {
+    log("⚠️ Driver ID is required to go online");
+    return;
+  }
+
+  socket.emit("join", {
+    userId: driverId,
+    role: "driver",
+  });
+
+  log("🚗 Driver joined and is now online");
 }
 
 function offline() {
-  const driverId = document.getElementById("driverId").value;
+  if (!socket) {
+    log("⚠️ Socket is not connected");
+    return;
+  }
 
-  socket.emit("driver_offline", { driverId });
-  log("🛑 Offline sent");
+  socket.emit("driver:offline");
+  log("🛑 Driver offline sent");
 }
 
 function sendLocation() {
-  const driverId = document.getElementById("driverId").value;
+  if (!socket || !socket.connected) {
+    log("⚠️ Please connect the socket first");
+    return;
+  }
+
+  const driverId = document.getElementById("driverId").value.trim();
   const lat = document.getElementById("lat").value;
   const lng = document.getElementById("lng").value;
 
-  socket.emit("driver_location", {
+  if (!driverId) {
+    log("⚠️ Driver ID is required to send location");
+    return;
+  }
+
+  socket.emit("driver:location", {
     driverId,
+    vehicleId:"6a141cd91663822a351ab6ca",
     lat: parseFloat(lat),
-    lng: parseFloat(lng)
+    lng: parseFloat(lng),
   });
 
   log("📍 Location sent");
