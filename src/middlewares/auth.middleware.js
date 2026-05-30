@@ -2,14 +2,13 @@ import { jwt } from '../utils/index.js';
 import sessionCache from '../cache/session.cache.js';
 
 const authMiddleware = async (req, res, next) => {
-  // const authHeader = req.header('Authorization');
-  // if (!authHeader || !authHeader.startsWith('Bearer ')) {
-  //   return res.status(401).json({ message: 'Access denied. No token provided.' });
-  // }
+  const authHeader = req.header('Authorization');
 
-  // const token = authHeader.substring(7);
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5Zjk4ZDU3OGRhYmM2NWZhMGY0YzQ4NSIsInBob25lIjoiMTIzNDU2Nzg5MCIsInJvbGUiOiJzdWJfYWRtaW4iLCJpYXQiOjE3NzgwNTI2MTYsImV4cCI6MTc3ODA1NjIxNn0.coBH73xbUr03WLdNADOUk-EdgXpUmkaHPArHB9XO0OM"
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
 
+  const token = authHeader.substring(7);
   try {
     const decoded = jwt.verifyToken(token);
 

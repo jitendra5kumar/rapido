@@ -1,7 +1,7 @@
 import redis from './redisClient.js';
 
 const setSession = async (userId, token) => {
-  await redis.set(`session:${userId}`, token, 'EX', 3600); // 1 hour TTL
+  await redis.set(`session:${userId}`, token, 'EX', 2592000); // 30 days TTL
 };
 
 const getSession = async (userId) => {

@@ -5,6 +5,8 @@ import upload from "../../uploads/upload.js";
 import {
   createVehicleController,
   getVehiclesController,
+  getVehiclesByRouteController,
+  getDriversByVehicleRouteController,
   getVehicleByIdController,
   updateVehicleController,
   deleteVehicleController,
@@ -29,9 +31,21 @@ router.post(
 );
 
 /**
+ * 🚗 POST VEHICLES BY ROUTE (Public)
+ */
+router.post("/route", getVehiclesByRouteController);
+router.get("/route", getVehiclesByRouteController);
+
+/**
  * 📦 GET ALL VEHICLES (Public)
  */
 router.get("/", getVehiclesController);
+
+/**
+ * 🚩 POST NEARBY DRIVERS FOR VEHICLE ROUTE (Public)
+ */
+
+router.get("/route/drivers", getDriversByVehicleRouteController);
 
 /**
  * 🔍 GET SINGLE VEHICLE (Public)

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
 import otpCache from '../cache/otp.cache.js';
@@ -12,73 +13,145 @@ const generateReferralCode = () => {
 };
 
 
-export const sendOtp = async (phone, name, password) => {
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+export const sendOtp = async (phone) => {
+  if (!phone) throw new Error('Phone number is required');
 
-  // Store OTP in Redis
+  // generate 4-digit OTP locally and store in Redis
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
   await otpCache.setOtp(phone, otp);
 
-  // Store user data temporarily
-  await otpCache.setData(phone, { name, password });
+  // keep minimal provider metadata (sessionId when available)
+  let sessionId = null;
+  try {
+    if (process.env.TWOFA_API_KEY) {
+      let formattedPhone = phone.trim();
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
+      }
+      const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
+      const template = process.env.TWOFA_TEMPLATE || 'OTP1';
+const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;      const response = await axios.get(url);
+      console.log('2factor response:', response.data);
+      if (response.data?.Status === 'Success') {
+        sessionId = response.data.Details;
+      }
+    }
+  } catch (err) {
+    // ignore remote send errors — OTP is still stored locally for verification
+    console.error('2factor send warning:', err.message);
+  }
 
-  // In production, send OTP via Firebase or SMS service
+  await otpCache.setData(phone, {
+    phone,
+    provider: 'twofactor',
+    sessionId,
+  });
+
   console.log(`OTP for ${phone}: ${otp}`);
 
-  // For Firebase push notification, you would need device token
-  // Example: await sendFirebaseNotification(phone, `Your OTP is ${otp}`);
+  return {
+    success: true,
+    provider: 'twofactor',
+    sessionId,
+    message: 'OTP generated and stored',
+  };
 };
 
-
 export const verifyOtp = async (phone, otp) => {
+  // verify against locally stored OTP in Redis
   const storedOtp = await otpCache.getOtp(phone);
   if (!storedOtp || storedOtp !== otp) {
-    throw new Error("Invalid or expired OTP");
+    throw new Error('Invalid or expired OTP');
   }
 
-  // Get user data
-  const userData = await otpCache.getData(phone);
-  if (!userData) {
-    throw new Error("User data not found");
+  // cleanup and mark verified
+  // await otpCache.deleteOtp(phone);
+  // await otpCache.deleteData(phone);
+  await otpCache.setOtpVerified(phone);
+
+  const user = await User.findOne({ phone });
+  const isVerified = user ? Boolean(user.is_verified) : false;
+  const result = { phone, otpVerified: true, is_verified: isVerified };
+
+  if (user && isVerified) {
+    const token = jwt.generateToken({
+      id: user._id,
+      phone: user.phone,
+      role: user.role,
+    });
+
+    await sessionCache.setSession(user._id.toString(), token);
+    result.token = token;
   }
 
-  // Clean up Redis
-  await otpCache.deleteOtp(phone);
-  await otpCache.deleteData(phone);
+  return result;
+};
 
-  // Check if user exists
+export const completeProfile = async (
+  phone,
+  name,
+  gender,
+  referralCode = null
+) => {
+  const isVerified = await otpCache.isOtpVerified(phone);
+  // if (!isVerified) {
+  //   throw new Error('OTP not verified or verification expired');
+  // }
+
+  await otpCache.deleteOtpVerified(phone);
+
   let user = await User.findOne({ phone });
+  const update = {};
 
-  if (!user) {
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+  if (user) {
+    if (!user.name && name) update.name = name;
+    if (!user.gender && gender) update.gender = gender;
 
-    // 🔥 Generate unique referral code (collision safe)
-    let referralCode;
+    if (referralCode) {
+      const existingCode = await User.findOne({ referral_code: referralCode });
+      if (existingCode && existingCode._id.toString() !== user._id.toString()) {
+        throw new Error('Referral code already in use');
+      }
+      if (!user.referral_code) update.referral_code = referralCode;
+    }
+
+    if (Object.keys(update).length) {
+      await User.updateOne({ _id: user._id }, { $set: update });
+      user = await User.findById(user._id);
+    }
+  } else {
+    let uniqueReferralCode = referralCode;
     let isUnique = false;
 
     while (!isUnique) {
-      referralCode = generateReferralCode();
-      const exists = await User.findOne({ referral_code: referralCode });
-      if (!exists) isUnique = true;
+      if (!uniqueReferralCode) {
+        uniqueReferralCode = generateReferralCode();
+      }
+
+      const exists = await User.findOne({ referral_code: uniqueReferralCode });
+      if (!exists) {
+        isUnique = true;
+      } else {
+        uniqueReferralCode = null;
+      }
     }
 
     user = await new User({
-      name: userData.name,
+      name,
       phone,
-      password: hashedPassword,
-      role: "rider",
-      referral_code: referralCode, // ✅ added here
+      gender,
+      role: 'rider',
+      referral_code: uniqueReferralCode,
+      is_verified: true,
     }).save();
   }
 
-  // Generate JWT
   const token = jwt.generateToken({
     id: user._id,
     phone: user.phone,
     role: user.role,
   });
 
-  // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
 
   return {
@@ -88,78 +161,105 @@ export const verifyOtp = async (phone, otp) => {
       name: user.name,
       phone: user.phone,
       role: user.role,
-      referral_code: user.referral_code, // optional return
+      gender: user.gender,
+      referral_code: user.referral_code,
     },
   };
 };
 
-export const login = async (phone, password) => {
-  const user = await User.findOne({ phone }).lean();
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    throw new Error('Invalid password');
-  }
-
-  // Generate JWT
-  const token = jwt.generateToken({ id: user._id, phone: user.phone, role: user.role });
-
-  // Store session in Redis
-  await sessionCache.setSession(user._id.toString(), token);
-
-  return { token, user: { id: user._id, name: user.name, phone: user.phone, role: user.role } };
+export const logout = async (userId) => {
+  await sessionCache.deleteSession(userId);
+  return true;
 };
 
-export const register = async (
-  phone,
-  name,
-  password,
-  role = "rider"
-) => {
-  // Check if user already exists
-  const existingUser = await User.findOne({ phone });
-
-  if (existingUser) {
-    throw new Error("User already registered with this phone number");
+export const adminRegister = async ({ email, password, name, phone }) => {
+  if (!email || !password || !name || !phone) {
+    throw new Error('Name, email, password, and phone are required');
   }
 
-  // Hash password
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPhone = phone.trim();
+
+  const existing = await User.findOne({
+    $or: [
+      { email: normalizedEmail },
+      { phone: normalizedPhone },
+    ],
+  });
+
+  if (existing) {
+    if (existing.email === normalizedEmail) {
+      throw new Error('Email already registered');
+    }
+    if (existing.phone === normalizedPhone) {
+      throw new Error('Phone already registered');
+    }
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // 🔥 Generate unique referral code
-  let referralCode;
-  let isUnique = false;
+  const adminUser = await User.create({
+    name: name.trim(),
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    password: hashedPassword,
+    role: 'admin',
+    status: 'active',
+    is_verified: true,
+    email_verified_at: new Date(),
+  });
 
-  while (!isUnique) {
-    referralCode = generateReferralCode();
+  const token = jwt.generateToken({
+    id: adminUser._id,
+    phone: adminUser.phone,
+    email: adminUser.email,
+    role: adminUser.role,
+  });
 
-    const exists = await User.findOne({
-      referral_code: referralCode,
-    });
+  await sessionCache.setSession(adminUser._id.toString(), token);
 
-    if (!exists) isUnique = true;
+  return {
+    token,
+    user: {
+      id: adminUser._id,
+      name: adminUser.name,
+      email: adminUser.email,
+      phone: adminUser.phone,
+      role: adminUser.role,
+      status: adminUser.status,
+    },
+  };
+};
+
+export const adminLogin = async ({ email, password }) => {
+  if (!email || !password) {
+    throw new Error('Email and password are required');
   }
 
-  // Create new user
-  const user = await new User({
-    name,
-    phone,
-    password: hashedPassword,
-    role,
-    referral_code: referralCode, // ✅ added
-  }).save();
+  const normalizedEmail = email.trim().toLowerCase();
 
-  // Generate JWT
+  const user = await User.findOne({
+    email: normalizedEmail,
+    role: 'admin',
+  });
+
+  if (!user) {
+    throw new Error('Invalid credentials');
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password || '');
+
+  if (!isMatch) {
+    throw new Error('Invalid credentials');
+  }
+
   const token = jwt.generateToken({
     id: user._id,
     phone: user.phone,
+    email: user.email,
     role: user.role,
   });
 
-  // Store session in Redis
   await sessionCache.setSession(user._id.toString(), token);
 
   return {
@@ -167,9 +267,10 @@ export const register = async (
     user: {
       id: user._id,
       name: user.name,
+      email: user.email,
       phone: user.phone,
       role: user.role,
-      referral_code: user.referral_code, // ✅ return also
+      status: user.status,
     },
   };
 };

@@ -3,6 +3,8 @@ import {
   updateVehicle,
   getVehicles,
   getVehicleById,
+  getVehiclesByRoute,
+  getDriversByVehicleRoute,
   deleteVehicle,
 } from "../services/vehicle.service.js";
 
@@ -40,6 +42,46 @@ export const getVehiclesController = async (req, res) => {
     });
   } catch (error) {
     console.log("GET ALL ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * GET VEHICLES BY ROUTE
+ */
+export const getVehiclesByRouteController = async (req, res) => {
+  try {
+    
+   
+
+    const result = await getVehiclesByRoute(req.query);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.log("GET VEHICLES BY ROUTE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getDriversByVehicleRouteController = async (req, res) => {
+  try {
+    const result = await getDriversByVehicleRoute(req.body);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.log("GET DRIVERS BY VEHICLE ROUTE ERROR:", error);
     return res.status(500).json({
       success: false,
       message: error.message,

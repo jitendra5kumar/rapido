@@ -107,7 +107,7 @@ export const findNearbyAvailableDrivers =
       'COUNT',
       limit * 5
     );
-
+console.log("rawDrivers", rawDrivers);
     if (
       !rawDrivers ||
       !rawDrivers.length
@@ -170,3 +170,50 @@ export const findNearbyAvailableDrivers =
 
     return result;
   };
+
+export const getDriverPositions = async (driverIds) => {
+  if (!Array.isArray(driverIds) || !driverIds.length) {
+    return [];
+  }
+
+  const positions = await redis.call(
+    'GEO_POS',
+    DRIVERS_GEO_KEY,
+    ...driverIds
+  );
+
+  return driverIds.map((driverId, index) => {
+    const position = positions[index];
+    return {
+      driverId,
+      location:
+        position && position.length === 2
+          ? {
+              longitude: parseFloat(position[0]),
+              latitude: parseFloat(position[1]),
+            }
+          : null,
+    };
+  });
+};
+
+export const findNearbyAvailableDriversWithLocation = async (options) => {
+  const drivers = await findNearbyAvailableDrivers(options);
+
+  if (!drivers.length) {
+    return [];
+  }
+
+  const positions = await getDriverPositions(
+    drivers.map((driver) => driver.driverId)
+  );
+
+  const positionMap = new Map(
+    positions.map((item) => [item.driverId, item.location])
+  );
+
+  return drivers.map((driver) => ({
+    ...driver,
+    location: positionMap.get(driver.driverId) || null,
+  }));
+};

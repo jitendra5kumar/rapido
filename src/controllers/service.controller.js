@@ -15,7 +15,6 @@ export const createService = async (req, res) => {
         const data = {
             ...req.body,
             image: req.files?.image?.[0]?.buffer,
-            icon: req.files?.icon?.[0]?.buffer,
         };
 
         const service = await createServiceService(data);
@@ -80,11 +79,6 @@ export const updateService = async (req, res) => {
         // ✅ handle image
         if (req.files?.image) {
             data.image = req.files.image[0].buffer;
-        }
-
-        // ✅ handle icon
-        if (req.files?.icon) {
-            data.icon = req.files.icon[0].buffer;
         }
 
         const updated = await updateServiceService(req.params.id, data);

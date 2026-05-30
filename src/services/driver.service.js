@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { jwt } from "../utils/index.js";
 import otpCache from "../cache/otp.cache.js";
+import sessionCache from "../cache/session.cache.js";
 
 // 🎯 referral code generator
 const generateReferralCode = () => {
@@ -58,8 +59,8 @@ export const sendOtp = async (
         throw new Error("Invalid sub admin referral code");
     }
 
-    // ✅ generate otp
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // ✅ generate 4-digit otp
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
     // ✅ save otp
     await otpCache.setOtp(phone, otp, 60);
@@ -150,15 +151,11 @@ export const verifyOtp = async (phone, otp) => {
     }
 
     // ✅ generate token
-    const token = jwt.sign(
+    const token = jwt.generateToken(
         {
             id: user._id,
             phone: user.phone,
             role: user.role,
-        },
-        process.env.JWT_SECRET,
-        {
-            expiresIn: "7d",
         }
     );
 
@@ -287,18 +284,14 @@ export const loginDriverService = async ({
         throw new Error("Wrong password");
     }
 
-    const token = jwt.sign(
-        {
-            id: user._id,
-            phone: user.phone,
-            role: user.role,
-        },
-        process.env.JWT_SECRET,
-        {
-            expiresIn: "7d",
-        }
+    const token = jwt.generateToken(
+      {
+        id: user._id,
+        phone: user.phone,
+        role: user.role,
+      }
     );
-
+   await sessionCache.setSession(user._id.toString(), token);
     return {
         user,
         token,

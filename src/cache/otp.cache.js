@@ -25,6 +25,18 @@ const deleteData = async (phone) => {
   await redis.del(`otp:${phone}:data`);
 };
 
+const setOtpVerified = async (phone) => {
+  await redis.set(`otp:${phone}:verified`, '1', 'EX', 300);
+};
+
+const isOtpVerified = async (phone) => {
+  return (await redis.get(`otp:${phone}:verified`)) === '1';
+};
+
+const deleteOtpVerified = async (phone) => {
+  await redis.del(`otp:${phone}:verified`);
+};
+
 export default {
   setOtp,
   getOtp,
@@ -32,4 +44,7 @@ export default {
   setData,
   getData,
   deleteData,
+  setOtpVerified,
+  isOtpVerified,
+  deleteOtpVerified,
 };

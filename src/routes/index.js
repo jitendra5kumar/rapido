@@ -34,7 +34,7 @@ router.use('/zone', zoneRoutes);
 router.use('/city', cityRoutes);
 router.use('/alert', alertRoutes);
 router.use('/vehicle-custom', vehicleCustomRoutes);
-router.use('/type', vehicletype);
+router.use('/vehicle', vehicletype);
 router.use('/driver', driverRoutes);
 router.use('/service', serviceRoute);
 router.use('/driver-doc', driverdocRoutes);

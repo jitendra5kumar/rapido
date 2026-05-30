@@ -21,7 +21,6 @@ router.post(
     rateLimitMiddleware,
     upload.fields([
         { name: "image", maxCount: 1 },
-        { name: "icon", maxCount: 1 }
     ]),
     createService
 );
@@ -40,7 +39,6 @@ router.put(
     requireRoles('admin', 'sub_admin'),
     upload.fields([
         { name: "image", maxCount: 1 },
-        { name: "icon", maxCount: 1 }
     ]),
     updateService
 );

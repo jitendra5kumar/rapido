@@ -10,6 +10,10 @@ import {
   setDriverBusyStatus,
 } from '../services/driverLocation.service.js';
 
+import {
+  getDriversByVehicleRoute,
+} from '../services/vehicle.service.js';
+
 import { initChatSocket } from './chat.socket.js';
 import { initAdminChatSocket } from './adminChat.socket.js';
 
@@ -355,6 +359,62 @@ const setupSockets = (server) => {
             'driver busy error:',
             err.message || err
           );
+        }
+      }
+    );
+
+    // =====================================================
+    // FIND NEARBY DRIVERS FOR ROUTE
+    // =====================================================
+
+    socket.on(
+      'find-nearby-drivers',
+
+      async (data = {}) => {
+
+        try {
+
+          const {
+            vehicleId,
+            pickup,
+            drop,
+            stops,
+            radiusMeters = 3000,
+            limit = 10,
+          } = data;
+
+          if (!vehicleId) {
+            socket.emit('nearby-drivers-error', {
+              message: 'vehicleId is required',
+            });
+            return;
+          }
+
+          const result = await getDriversByVehicleRoute({
+            vehicleId,
+            pickup,
+            drop,
+            stops,
+            radiusMeters,
+            limit,
+          });
+
+          socket.emit('nearby-drivers', result);
+
+          console.log(
+            `Found ${result.count} drivers for vehicle ${vehicleId}`
+          );
+
+        } catch (err) {
+
+          console.error(
+            'find nearby drivers error:',
+            err.message || err
+          );
+
+          socket.emit('nearby-drivers-error', {
+            message: err.message || 'Error finding nearby drivers',
+          });
         }
       }
     );

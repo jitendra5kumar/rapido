@@ -28,10 +28,12 @@ const vehicleSchema = new mongoose.Schema(
     commissionType: { type: String, enum: ["percentage", "fixed"] },
     commissionRate: Number,
 
+    badge: { type: String, default: "" },
+    subtitle: { type: String, default: "" },
+    vehicleDistance: { type: Number, default: 0 },
+    vehicleStop: { type: Boolean, default: false },
 
     createdById: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-
-    taxId: { type: mongoose.Schema.Types.ObjectId, ref: "Tax" },
 
     status: { type: String, enum: ["active", "inactive"], default: "active" },
 

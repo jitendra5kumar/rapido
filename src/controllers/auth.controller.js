@@ -4,31 +4,58 @@ import User from '../models/user.model.js';
 import { asyncHandler } from '../utils/index.js';
 import { response } from '../utils/index.js';
 
+
+
 export const sendOtp = asyncHandler(async (req, res) => {
-  const { phone, name, password } = req.body;
-  await authService.sendOtp(phone, name, password);
-  response.success(res, 'OTP sent successfully');
+  const { phone } = req.body;
+  
+  if (!phone) {
+    return response.error(res, 'Phone number is required', 400);
+  }
+  
+  const result = await authService.sendOtp(phone);
+  
+  // Return different response based on provider
+  response.success(res, result.message || 'OTP sent successfully', {
+    phone,
+    provider: result.provider,
+    message: result.message,
+    requestId: result.requestId || null  // For tracking if available
+  });
 });
 
 export const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, otp } = req.body;
   const result = await authService.verifyOtp(phone, otp);
-  response.success(res, 'OTP verified and logged in', result);
+  response.success(res, 'OTP verified successfully', result);
 });
 
-export const login = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
-  const result = await authService.login(phone, password);
-  response.success(res, 'Login successful', result);
+export const completeProfile = asyncHandler(async (req, res) => {
+  const { phone, name, gender, referral_code } = req.body;
+  const result = await authService.completeProfile(
+    phone,
+    name,
+    gender,
+    referral_code
+  );
+  response.success(res, 'Profile completed and logged in', result);
+});
+export const logout = asyncHandler(async (req, res) => {
+  await authService.logout(req.user.id);
+  response.success(res, 'Logged out successfully', { success: true });
 });
 
-export const register = asyncHandler(async (req, res) => {
-  const { phone, name, password } = req.body;
- 
-  const result = await authService.register(phone, name, password);
-  response.success(res, 'Registration successful', result);
+export const adminRegister = asyncHandler(async (req, res) => {
+  const { email, password, name, phone } = req.body;
+  const result = await authService.adminRegister({ email, password, name, phone });
+  response.success(res, 'Admin registered successfully', result);
 });
 
+export const adminLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const result = await authService.adminLogin({ email, password });
+  response.success(res, 'Admin logged in successfully', result);
+});
 
 export const saveFcmToken = async (req, res) => {
   try {

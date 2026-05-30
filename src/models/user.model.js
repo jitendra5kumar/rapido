@@ -8,6 +8,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    last_name: {
+      type: String,
+      trim: true,
+    },
+
     email: {
       type: String,
       trim: true,
@@ -29,7 +34,7 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
+      required: false,
     },
 
     // ⚠️ avoid in production
@@ -37,7 +42,7 @@ const userSchema = new mongoose.Schema(
 
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
+      enum: ["Male", "Female", "Other"],
     },
 
     profile_image_id: {

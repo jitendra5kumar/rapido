@@ -5,7 +5,7 @@ export const uploadDriverVehicle = async (req, res) => {
   try {
     const user_id = req.user.id; // auth middleware required
 
-    const { rcNumber, numberPlate, seatCount, serviceId } = req.body;
+    const { rcNumber, numberPlate, seatCount, serviceId, vehicleTypeId } = req.body;
 
     const files = req.files;
 
@@ -14,6 +14,7 @@ export const uploadDriverVehicle = async (req, res) => {
       numberPlate,
       seatCount,
       serviceId,
+      vehicleTypeId,
     };
 
     // 🚀 Upload vehicle images (max 6)

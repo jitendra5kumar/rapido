@@ -16,6 +16,11 @@ const driverSchema = new mongoose.Schema(
       ref: "Service",
       required: true,
     },
+    vehicleTypeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "VehicleType",
+      required: true,
+    },
 
     rcNumber: {
       type: String,
@@ -58,7 +63,7 @@ const driverSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 driverSchema.path("vehicleImages").validate(function (value) {

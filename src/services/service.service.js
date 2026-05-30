@@ -1,22 +1,32 @@
 import Service from "../models/service.model.js";
 import { uploadToImgBB } from "../services/imgbb.service.js";
 
+const slugify = (text) => {
+    return text
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+};
+
 // ➤ Create Service
 export const createServiceService = async (data) => {
-    let { name, slug, description, image, icon } = data;
+    let { name, slug, description, image } = data;
 
-    const existing = await Service.findOne({ slug });
-    if (existing) {
-        throw new Error("Slug already exists");
+    if (!name || !name.trim()) {
+        throw new Error("Name is required to generate slug");
     }
+
+    slug = slug && typeof slug === "string" && slug.trim()
+        ? slugify(slug)
+        : slugify(name);
 
     // ✅ Upload image if buffer/file provided
     if (image && typeof image !== "string") {
         image = await uploadToImgBB(image);
-    }
-
-    if (icon && typeof icon !== "string") {
-        icon = await uploadToImgBB(icon);
     }
 
     const service = await Service.create({
@@ -24,7 +34,6 @@ export const createServiceService = async (data) => {
         slug,
         description,
         image,
-        icon,
     });
 
     return service;
@@ -44,17 +53,18 @@ export const getServiceByIdService = async (id) => {
 
 // ➤ Update Service
 export const updateServiceService = async (id, data) => {
-    let { image, icon } = data;
+    let { image, name, slug } = data;
+
+    if (name && (!slug || typeof slug !== "string" || !slug.trim())) {
+        data.slug = slugify(name);
+    } else if (slug && typeof slug === "string") {
+        data.slug = slugify(slug);
+    }
 
     // ✅ upload if new file comes
     if (image && typeof image !== "string") {
         image = await uploadToImgBB(image);
         data.image = image;
-    }
-
-    if (icon && typeof icon !== "string") {
-        icon = await uploadToImgBB(icon);
-        data.icon = icon;
     }
 
     const service = await Service.findByIdAndUpdate(id, data, {

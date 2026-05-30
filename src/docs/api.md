@@ -3,14 +3,12 @@
 ## Authentication Endpoints
 
 ### POST /api/auth/send-otp
-Send OTP for registration/login.
+Send OTP to a phone number.
 
 **Request Body:**
 ```json
 {
-  "phone": "1234567890",
-  "name": "John Doe",
-  "password": "securepassword"
+  "phone": "1234567890"
 }
 ```
 
@@ -23,13 +21,13 @@ Send OTP for registration/login.
 ```
 
 ### POST /api/auth/verify-otp
-Verify OTP and complete registration/login.
+Verify the OTP and mark the phone number as verified.
 
 **Request Body:**
 ```json
 {
   "phone": "1234567890",
-  "otp": "123456"
+  "otp": "1234"
 }
 ```
 
@@ -37,15 +35,61 @@ Verify OTP and complete registration/login.
 ```json
 {
   "success": true,
-  "message": "OTP verified and logged in",
+  "message": "OTP verified successfully",
+  "data": {
+    "phone": "1234567890",
+    "otpVerified": true
+  }
+}
+```
+
+### POST /api/auth/complete-profile
+Complete registration after OTP verification with name, gender and referral code.
+
+**Request Body:**
+```json
+{
+  "phone": "1234567890",
+  "name": "John Doe",
+  "gender": "male",
+  "referral_code": "AB12CD34"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile completed and logged in",
   "data": {
     "token": "jwt_token_here",
     "user": {
       "id": "user_id",
       "name": "John Doe",
       "phone": "1234567890",
-      "role": "rider"
+      "role": "rider",
+      "gender": "male",
+      "referral_code": "AB12CD34"
     }
+  }
+}
+```
+
+### POST /api/auth/logout
+Logout the authenticated user and invalidate the stored session token.
+
+**Headers:**
+```
+Authorization: Bearer jwt_token_here
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": {
+    "success": true
   }
 }
 ```
