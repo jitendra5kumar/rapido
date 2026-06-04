@@ -123,7 +123,12 @@ function offline() {
     return;
   }
 
-  socket.emit("driver:offline");
+  const driverId = document.getElementById("driverId").value.trim();
+
+  socket.emit("driver:offline", {
+    driverId,
+  });
+
   log("🛑 Driver offline sent");
 }
 
