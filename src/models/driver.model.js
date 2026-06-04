@@ -18,7 +18,7 @@ const driverSchema = new mongoose.Schema(
     },
     vehicleTypeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "VehicleType",
+      ref: "Vehicle",
       required: true,
     },
 

@@ -235,7 +235,7 @@ const processRideRequest = async (
 
   try {
     const ride = await Ride.findById(rideId)
-      .select(`_id status pickupLocation userId dispatchMeta`)
+      .select(`_id status pickupLocation userId vehicleId dispatchMeta`)
       .lean();
 
     if (!ride) {
@@ -244,7 +244,6 @@ const processRideRequest = async (
         DISPATCH_CONSUMER_GROUP,
         streamId
       );
-
       return;
     }
 
@@ -275,13 +274,19 @@ const processRideRequest = async (
       return;
     }
 
+  
     const nearbyDrivers =
       await findNearbyAvailableDrivers({
         longitude,
         latitude,
         radiusMeters: 3000,
         limit: 20,
+        vehicleId: ride.vehicleId,
       });
+
+    console.log(
+      `Dispatch: found ${nearbyDrivers.length} nearby drivers for ride ${rideId} (vehicleId=${ride.vehicleId})`
+    );
 
     if (!nearbyDrivers.length) {
       console.log(

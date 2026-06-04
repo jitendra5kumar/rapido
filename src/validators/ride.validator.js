@@ -10,6 +10,7 @@ export const createRide = [
   locationCoordinatesValidator('pickupLocation'),
   body('dropLocation.address').isLength({ min: 1 }).withMessage('Drop address is required'),
   locationCoordinatesValidator('dropLocation'),
+  body('vehicleId').optional().isMongoId().withMessage('Vehicle ID must be a valid MongoDB ID'),
   body('payment.method')
     .optional()
     .isIn(['cash', 'card', 'upi', 'wallet'])

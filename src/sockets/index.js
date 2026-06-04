@@ -423,9 +423,10 @@ const setupSockets = (server) => {
             radiusMeters,
             limit,
           });
-console.log("result", result);
           socket.emit('nearby-drivers', result);
-
+console.log(
+            `Emitted nearby drivers for vehicle ${vehicleId}`,result
+          );
           console.log(
             `Found ${result.length} drivers for vehicle ${vehicleId}`
           );

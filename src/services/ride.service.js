@@ -27,7 +27,8 @@ export const createRide =
         userId:
           data.userId,
 
-        driverId: null,
+        driverId: data.driverId || null,
+        vehicleId: data.vehicleId || null,
 
         pickupLocation: {
           type: 'Point',
@@ -39,6 +40,10 @@ export const createRide =
           address:
             data.pickupLocation
               .address,
+
+          title:
+            data.pickupLocation
+              .title,
         },
 
         dropLocation: {
@@ -51,6 +56,10 @@ export const createRide =
           address:
             data.dropLocation
               .address,
+
+          title:
+            data.dropLocation
+              .title,
         },
 
         status:
@@ -68,7 +77,7 @@ export const createRide =
 
           baseFare: Number(
             data.payment
-              ?.baseFare || 0
+              ?.fare || 0
           ),
 
           tax: Number(
@@ -148,15 +157,10 @@ export const getRideById =
 
     return await Ride.findById(id)
 
-      .populate(
-        'userId',
-        'name phone'
-      )
+      .populate("userId", "name phone")
 
-      .populate(
-        'driverId',
-        'name phone'
-      );
+      .populate("driverId", "name phone")
+      .populate("vehicleId", "name vehicleImage");
   };
 
 export const updateRide =
@@ -193,7 +197,7 @@ export const acceptRide =
         await User.findOne({
           _id: driverId,
           role: 'driver',
-          is_online: true,
+      
           status: 'active',
         }).session(session);
 
