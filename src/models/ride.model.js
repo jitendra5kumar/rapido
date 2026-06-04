@@ -4,17 +4,20 @@ const rideSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "Driver", default: null },
+    vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", default: null },
 
     pickupLocation: {
       type: { type: String, default: "Point", enum: ["Point"] },
       coordinates: [Number],
       address: String,
+      title: String,
     },
 
     dropLocation: {
       type: { type: String, default: "Point", enum: ["Point"] },
       coordinates: [Number],
       address: String,
+      title: String,
     },
 
     status: {

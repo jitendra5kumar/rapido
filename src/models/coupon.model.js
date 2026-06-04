@@ -21,7 +21,7 @@ const couponSchema = new mongoose.Schema(
     },
     vehicleId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "VehicleType",
+      ref: "Vehicle",
       index: true,
     },
     discountValue: {

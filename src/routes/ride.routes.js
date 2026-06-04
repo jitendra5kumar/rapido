@@ -17,7 +17,7 @@ router.use(authMiddleware);
 
 router.post(
   '/',
- 
+  rideController.normalizeRidePayload,
   createRide,
   handleValidationErrors,
   rideController.createRide

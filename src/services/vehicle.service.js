@@ -246,9 +246,7 @@ export const getVehiclesByRoute = async (params) => {
 export const getDriversByVehicleRoute = async (params) => {
   const {
     vehicleId,
-    pickup,
-    drop,
-    stops,
+    pickup,   
     radiusMeters = 3000,
     limit = 10,
   } = params;
@@ -258,67 +256,17 @@ export const getDriversByVehicleRoute = async (params) => {
   }
 
   const pickupPoint = parseRoutePoint(pickup);
-  const dropPoint = parseRoutePoint(drop);
-
-  if (!pickupPoint || !dropPoint) {
-    throw new Error("Pickup and drop coordinates are required");
-  }
-
-  const stopPoints = (stops || []).map((stop) => parseRoutePoint(stop));
-
-  if (stopPoints.some((point) => point === null)) {
-    throw new Error("All stop coordinates must include latitude/longitude");
-  }
-
-  const routePoints = [pickupPoint, ...stopPoints, dropPoint];
-
-  let totalDistance = 0;
-  for (let i = 0; i < routePoints.length - 1; i += 1) {
-    totalDistance += getDistanceKm(routePoints[i], routePoints[i + 1]);
-  }
-
-  const vehicle = await getVehicleById(vehicleId);
-
-  if (!vehicle) {
-    throw new Error("Vehicle not found");
-  }
-
-  if (vehicle.status !== "active") {
-    throw new Error("Selected vehicle is not active");
-  }
-
-  const supportsStops = Boolean(vehicle.vehicleStop);
-  const allowedDistance = Number(vehicle.vehicleDistance) || 0;
-
-  if (stopPoints.length > 0 && !supportsStops) {
-    throw new Error("Selected vehicle does not support route stops");
-  }
-
-  if (allowedDistance > 0 && allowedDistance < totalDistance) {
-    throw new Error("Selected vehicle does not support the requested route distance");
-  }
-
+ 
   const nearbyDrivers = await findNearbyAvailableDriversWithLocation({
     longitude: pickupPoint.longitude,
     latitude: pickupPoint.latitude,
     radiusMeters: Number(radiusMeters),
+    vehicleId:vehicleId,
     limit: Number(limit),
   });
 
-  const drivers = nearbyDrivers.map((driver) => ({
-    driverId: driver.driverId,
-    distance: driver.distance,
-    location: driver.location,
-    icon: vehicle.vehicleMapIcon || null,
-  }));
-
-  return {
-    vehicleId,
-    totalDistance,
-    count: drivers.length,
-    vehicleIcon: vehicle.vehicleMapIcon || null,
-    drivers,
-  };
+  return     nearbyDrivers;
+  
 };
 
 /**

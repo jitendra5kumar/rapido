@@ -13,3 +13,5 @@ A production-grade Node.js backend for ride-sharing app.
 ## API Documentation
 
 See `src/docs/api.md` for detailed API endpoints.
+
+node src/workers/dispatch.worker.js

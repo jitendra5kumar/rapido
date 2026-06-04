@@ -12,14 +12,86 @@ import {
 import { emitRideEvent } from '../helpers/realtime.helper.js';
 import { sendRidePushNotification } from '../helpers/notification.helper.js';
 import { NOTIFICATION_EVENTS } from '../utils/constants.js';
+import Driver from '../models/driver.model.js';
+export const normalizeRidePayload = (req, res, next) => {
+  const { pickup, drop, paymentMethod, payment } = req.body;
 
+  if (pickup || drop || paymentMethod) {
+    req.body = {
+      ...req.body,
+      pickupLocation:
+        req.body.pickupLocation ||
+        (pickup
+          ? {
+              address: pickup.address,
+              coordinates: [pickup.longitude, pickup.latitude],
+              title: pickup.title,
+            }
+          : undefined),
+      dropLocation:
+        req.body.dropLocation ||
+        (drop
+          ? {
+              address: drop.address,
+              coordinates: [drop.longitude, drop.latitude],
+              title: drop.title,
+            }
+          : undefined),
+      payment:
+        payment ||
+        (paymentMethod
+          ? {
+              method: paymentMethod,
+            }
+          : undefined),
+    };
+  }
+
+  next();
+};
 export const createRide =
   asyncHandler(async (req, res) => {
+   
+
+    const ridePayload = {
+      ...req.body,
+      vehicleId: req.body.vehicleId || null,
+      pickupLocation:
+        req.body.pickupLocation ||
+        (req.body.pickup
+          ? {
+              address: req.body.pickup.address,
+              coordinates: [
+                req.body.pickup.longitude,
+                req.body.pickup.latitude,
+              ],
+              title: req.body.pickup.title,
+            }
+          : undefined),
+      dropLocation:
+        req.body.dropLocation ||
+        (req.body.drop
+          ? {
+              address: req.body.drop.address,
+              coordinates: [
+                req.body.drop.longitude,
+                req.body.drop.latitude,
+              ],
+              title: req.body.drop.title,
+            }
+          : undefined),
+      payment:
+        req.body.payment ||
+        (req.body.paymentMethod
+          ? {
+              method: req.body.paymentMethod,
+            }
+          : undefined),
+      userId: req.user.id,
+    };
+
     const ride =
-      await rideService.createRide({
-        ...req.body,
-        userId: req.user.id,
-      });
+      await rideService.createRide(ridePayload);
 
     try {
       await redis.xadd(
@@ -153,11 +225,11 @@ export const updateRide =
 
 export const acceptRide =
   asyncHandler(async (req, res) => {
-    const ride =
-      await rideService.acceptRide({
-        rideId: req.params.rideId,
-        driverId: req.user.id,
-      });
+    const driverId=await Driver.findById(req.user.id);
+    const ride = await rideService.acceptRide({
+      rideId: req.params.rideId,
+      driverId: driverId._id,
+    });
 
     if (!ride) {
       return response.error(

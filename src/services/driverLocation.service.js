@@ -1,197 +1,139 @@
-// driverLocation.service.js
+// driverLocation.service.js — OPTIMIZED
 
-import redis, {
-  DRIVERS_GEO_KEY,
-} from '../config/redis.js';
+import redis, { DRIVERS_GEO_KEY } from "../config/redis.js";
 
-const DRIVER_HEARTBEAT_TTL = 15;
+const DRIVER_HEARTBEAT_TTL = 20 * 60;
+const ONLINE_DRIVER_KEY = "drivers:online";
+const BUSY_DRIVER_KEY = "drivers:busy";
 
-const ONLINE_DRIVER_KEY = 'drivers:online';
-const BUSY_DRIVER_KEY = 'drivers:busy';
-// socket
 export const updateDriverLocation = async (
   driverId,
-  { lat, lng }
+  vehicleId,
+  { lat, lng },
 ) => {
-  if (
-    lat === undefined ||
-    lng === undefined
-  ) {
-    throw new Error(
-      'Latitude and longitude required'
-    );
+  if (lat === undefined || lng === undefined) {
+    throw new Error("Latitude and longitude required");
   }
 
+  // FIXED: Saari calls ek pipeline mein — 0 extra round trips
   const pipeline = redis.pipeline();
-
-  pipeline.geoadd(
-    DRIVERS_GEO_KEY,
-    lng,
-    lat,
-    driverId.toString()
-  );
-
-  pipeline.sadd(
-    ONLINE_DRIVER_KEY,
-    driverId.toString()
-  );
-
+  pipeline.geoadd(DRIVERS_GEO_KEY, lng, lat, driverId.toString());
+  pipeline.sadd(ONLINE_DRIVER_KEY, driverId.toString());
   pipeline.set(
     `driver:lastSeen:${driverId}`,
     Date.now(),
-    'EX',
-    DRIVER_HEARTBEAT_TTL
+    "EX",
+    DRIVER_HEARTBEAT_TTL,
   );
-
+  pipeline.set(
+    `driver:vehicle:${driverId}`,
+    vehicleId,
+    "EX",
+    DRIVER_HEARTBEAT_TTL,
+  ); // TTL bhi lagao
   await pipeline.exec();
 };
-// logout
-// offline
-// disconnect
-// socket
-export const removeDriverLocation =
-  async (driverId) => {
-    const pipeline = redis.pipeline();
 
-    pipeline.zrem(
-      DRIVERS_GEO_KEY,
-      driverId.toString()
-    );
+export const removeDriverLocation = async (driverId) => {
+  const pipeline = redis.pipeline();
+  pipeline.zrem(DRIVERS_GEO_KEY, driverId.toString());
+  pipeline.srem(ONLINE_DRIVER_KEY, driverId.toString());
+  pipeline.srem(BUSY_DRIVER_KEY, driverId.toString()); // cleanup busy status bhi
+  pipeline.del(`driver:lastSeen:${driverId}`);
+  pipeline.del(`driver:vehicle:${driverId}`);
+  await pipeline.exec();
+};
 
-    pipeline.srem(
-      ONLINE_DRIVER_KEY,
-      driverId.toString()
-    );
+export const setDriverBusyStatus = async (driverId, busy) => {
+  if (busy) {
+    await redis.sadd(BUSY_DRIVER_KEY, driverId.toString());
+  } else {
+    await redis.srem(BUSY_DRIVER_KEY, driverId.toString());
+  }
+};
 
-    pipeline.del(
-      `driver:lastSeen:${driverId}`
-    );
-
-    await pipeline.exec();
-  };
-// Ride Accept Hone Par Driver Busy Status Set Karna Hai
-// Ride Complete Hone Par Driver Busy Status Remove Karna Hai
-export const setDriverBusyStatus =
-  async (driverId, busy) => {
-    if (busy) {
-      await redis.sadd(
-        BUSY_DRIVER_KEY,
-        driverId.toString()
-      );
-    } else {
-      await redis.srem(
-        BUSY_DRIVER_KEY,
-        driverId.toString()
-      );
-    }
-  };
-
-export const findNearbyAvailableDrivers =
-  async ({
+export const findNearbyAvailableDrivers = async ({
+  longitude,
+  latitude,
+  radiusMeters = 3000,
+  limit = 10,
+  vehicleId = null,
+}) => {
+  // Step 1: Geo search
+  const rawDrivers = await redis.call(
+    "GEOSEARCH",
+    DRIVERS_GEO_KEY,
+    "FROMLONLAT",
     longitude,
     latitude,
-    radiusMeters = 3000,
-    limit = 10,
-  }) => {
-    const rawDrivers = await redis.call(
-      'GEOSEARCH',
-      DRIVERS_GEO_KEY,
-      'FROMLONLAT',
-      longitude,
-      latitude,
-      'BYRADIUS',
-      radiusMeters,
-      'm',
-      'WITHDIST',
-      'ASC',
-      'COUNT',
-      limit * 5
-    );
-console.log("rawDrivers", rawDrivers);
-    if (
-      !rawDrivers ||
-      !rawDrivers.length
-    ) {
-      return [];
-    }
+    "BYRADIUS",
+    radiusMeters,
+    "m",
+    "WITHDIST",
+    "ASC",
+    "COUNT",
+    limit * 5,
+  );
 
-    const result = [];
-
-    for (const item of rawDrivers) {
-      const driverId = item[0];
-      const distance = item[1];
-
-      const [
-        isOnline,
-        isBusy,
-        lastSeen,
-      ] = await Promise.all([
-        redis.sismember(
-          ONLINE_DRIVER_KEY,
-          driverId
-        ),
-        redis.sismember(
-          BUSY_DRIVER_KEY,
-          driverId
-        ),
-        redis.get(
-          `driver:lastSeen:${driverId}`
-        ),
-      ]);
-
-      if (!isOnline) {
-        continue;
-      }
-
-      if (isBusy) {
-        continue;
-      }
-
-      if (!lastSeen) {
-        continue;
-      }
-
-      const diff =
-        Date.now() - Number(lastSeen);
-
-      if (diff > 15000) {
-        continue;
-      }
-
-      result.push({
-        driverId,
-        distance: parseFloat(distance),
-      });
-
-      if (result.length >= limit) {
-        break;
-      }
-    }
-
-    return result;
-  };
-
-export const getDriverPositions = async (driverIds) => {
-  if (!Array.isArray(driverIds) || !driverIds.length) {
+  if (!rawDrivers?.length) {
+    console.log('DriverSearch: no raw drivers from GEOSEARCH');
     return [];
   }
 
-  const positions = await redis.call(
-    'GEO_POS',
-    DRIVERS_GEO_KEY,
-    ...driverIds
-  );
+  // Step 2: SINGLE PIPELINE — sabke liye ek saath
+  // Pehle online/busy check karo (sets mein — fast O(1))
+  const pipeline = redis.pipeline();
+  for (const item of rawDrivers) {
+    const driverId = item[0];
+    pipeline.sismember(ONLINE_DRIVER_KEY, driverId);
+    pipeline.sismember(BUSY_DRIVER_KEY, driverId);
+    pipeline.get(`driver:lastSeen:${driverId}`);
+    pipeline.get(`driver:vehicle:${driverId}`);
+  }
+  const pipelineResults = await pipeline.exec();
+
+  // Step 3: Filter karo — zero extra Redis calls
+  const now = Date.now();
+  const result = [];
+
+  for (let i = 0; i < rawDrivers.length; i++) {
+    const driverId = rawDrivers[i][0];
+    const distance = rawDrivers[i][1];
+    const base = i * 4;
+
+    const isOnline = pipelineResults[base][1];
+    const isBusy = pipelineResults[base + 1][1];
+    const lastSeen = pipelineResults[base + 2][1];
+    const assignedVehicle = pipelineResults[base + 3][1];
+
+    if (!isOnline || isBusy || !lastSeen) continue;
+    if (vehicleId && assignedVehicle !== vehicleId.toString()) continue;
+    if (now - Number(lastSeen) > DRIVER_HEARTBEAT_TTL * 1000) continue;
+
+    result.push({
+      driverId,
+      distance: parseFloat(distance),
+      vehicleId: assignedVehicle,
+    });
+
+    if (result.length >= limit) break;
+  }
+
+  return result;
+};
+
+export const getDriverPositions = async (driverIds) => {
+  if (!Array.isArray(driverIds) || !driverIds.length) return [];
+
+  const positions = await redis.call("GEOPOS", DRIVERS_GEO_KEY, ...driverIds);
 
   return driverIds.map((driverId, index) => {
-    const position = positions[index];
+    const pos = positions[index];
     return {
       driverId,
       location:
-        position && position.length === 2
-          ? {
-              longitude: parseFloat(position[0]),
-              latitude: parseFloat(position[1]),
-            }
+        pos?.length === 2
+          ? { longitude: parseFloat(pos[0]), latitude: parseFloat(pos[1]) }
           : null,
     };
   });
@@ -199,18 +141,10 @@ export const getDriverPositions = async (driverIds) => {
 
 export const findNearbyAvailableDriversWithLocation = async (options) => {
   const drivers = await findNearbyAvailableDrivers(options);
+  if (!drivers.length) return [];
 
-  if (!drivers.length) {
-    return [];
-  }
-
-  const positions = await getDriverPositions(
-    drivers.map((driver) => driver.driverId)
-  );
-
-  const positionMap = new Map(
-    positions.map((item) => [item.driverId, item.location])
-  );
+  const positions = await getDriverPositions(drivers.map((d) => d.driverId));
+  const positionMap = new Map(positions.map((p) => [p.driverId, p.location]));
 
   return drivers.map((driver) => ({
     ...driver,

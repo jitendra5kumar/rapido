@@ -157,12 +157,15 @@ const setupSockets = (server) => {
         try {
 
           const {
+            driverId: payloadDriverId,
+            vehicleId,
             lat,
             lng,
           } = data;
 
-          const driverId =
-            socket.driverId;
+          let driverId =
+            socket.driverId ||
+            (payloadDriverId ? payloadDriverId.toString() : null);
 
           if (
             !driverId ||
@@ -172,9 +175,35 @@ const setupSockets = (server) => {
             return;
           }
 
+          if (!socket.driverId && payloadDriverId) {
+            socket.driverId = driverId;
+            socket.userId = driverId;
+            socket.role = 'driver';
+            socket.join(driverId);
+
+            await redis.set(
+              `socket:${driverId}`,
+              socket.id,
+              'EX',
+              86400
+            );
+
+            await redis.sadd(
+              'drivers:online',
+              driverId
+            );
+
+           
+
+            console.log(
+              `Driver auto-joined from location event: ${driverId}`
+            );
+          }
+
           // Update realtime location
           await updateDriverLocation(
             driverId,
+            vehicleId,
             {
               lat,
               lng,
@@ -187,7 +216,6 @@ const setupSockets = (server) => {
           if (
             socket.activeRideId
           ) {
-
             io.to(
               `ride:${socket.activeRideId}`
             ).emit(
@@ -376,9 +404,7 @@ const setupSockets = (server) => {
 
           const {
             vehicleId,
-            pickup,
-            drop,
-            stops,
+            pickup,           
             radiusMeters = 3000,
             limit = 10,
           } = data;
@@ -393,16 +419,16 @@ const setupSockets = (server) => {
           const result = await getDriversByVehicleRoute({
             vehicleId,
             pickup,
-            drop,
-            stops,
+           
             radiusMeters,
             limit,
           });
-
           socket.emit('nearby-drivers', result);
-
+console.log(
+            `Emitted nearby drivers for vehicle ${vehicleId}`,result
+          );
           console.log(
-            `Found ${result.count} drivers for vehicle ${vehicleId}`
+            `Found ${result.length} drivers for vehicle ${vehicleId}`
           );
 
         } catch (err) {
