@@ -244,7 +244,7 @@ export const acceptRide =
    
     const ride = await rideService.acceptRide({
       rideId: req.params.rideId,
-      driverId: driverId._id,
+      driverId: driverId.id,
     });
 
     if (!ride) {

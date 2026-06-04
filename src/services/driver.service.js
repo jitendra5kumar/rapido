@@ -323,6 +323,8 @@ export const updateProfileService = async (
     updates
 ) => {
 
+    console.log(userId,updates)
+
     delete updates.password;
     delete updates.role;
 
