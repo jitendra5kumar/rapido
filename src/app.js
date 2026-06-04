@@ -34,4 +34,8 @@ app.get("/test", (req, res) => {
   res.render("test");
 });
 
+app.get("/ride-test", (req, res) => {
+  res.render("ride-test");
+});
+
 export default app;

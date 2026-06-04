@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const rideSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    driverId: { type: mongoose.Schema.Types.ObjectId, ref: "Driver", default: null },
+    driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", default: null },
 
     pickupLocation: {
@@ -19,6 +19,15 @@ const rideSchema = new mongoose.Schema(
       address: String,
       title: String,
     },
+
+    stops: [
+      {
+        type: { type: String, default: "Point", enum: ["Point"] },
+        coordinates: [Number],
+        address: String,
+        title: String,
+      },
+    ],
 
     status: {
       type: String,
@@ -47,6 +56,10 @@ const rideSchema = new mongoose.Schema(
       driverTip: { type: Number, default: 0 },
       totalFare: Number,
     },
+
+    // Estimated/recorded trip metrics
+    distanceMeters: { type: Number, default: 0 },
+    durationMinutes: { type: Number, default: 0 },
 
     requestedAt: { type: Date, default: Date.now },
     acceptedAt: Date,

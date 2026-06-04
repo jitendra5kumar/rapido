@@ -106,6 +106,15 @@ export const createRide =
           ),
         },
 
+        // optional estimated metrics provided when booking
+        distanceMeters: Number(
+          data.distanceMeters || 0
+        ),
+
+        durationMinutes: Number(
+          data.durationMinutes || 0
+        ),
+
         requestedAt:
           new Date(),
       });
@@ -149,6 +158,15 @@ export const getRides =
         createdAt: -1,
       })
 
+      .lean();
+  };
+
+
+
+  export const getRecentUserRides = async ({ userId, limit = 10 }) => {
+    return await Ride.find({ userId }, "pickupLocation dropLocation stops distanceMeters durationMinutes")
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
       .lean();
   };
 

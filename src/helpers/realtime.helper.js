@@ -19,4 +19,6 @@ export const emitRideEvent = async ({
 
   const room = targetId.toString();
   global.io.to(room).emit(event, payload);
+
+  console.log("ROOMS:", [...global.io.sockets.adapter.rooms.keys()]);
 };

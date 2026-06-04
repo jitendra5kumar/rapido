@@ -200,6 +200,21 @@ export const getMyRides =
     );
   });
 
+export const getRecentRides =
+  asyncHandler(async (req, res) => {
+    const rides =
+      await rideService.getRecentUserRides({
+        userId: req.user.id,
+        limit: 10,
+      });
+
+    return response.success(
+      res,
+      'Your recent rides fetched successfully',
+      rides
+    );
+  });
+
 export const updateRide =
   asyncHandler(async (req, res) => {
     const ride =
@@ -225,7 +240,8 @@ export const updateRide =
 
 export const acceptRide =
   asyncHandler(async (req, res) => {
-    const driverId=await Driver.findById(req.user.id);
+    const driverId=await User.findById(req.user.id).select('_id').lean();
+   
     const ride = await rideService.acceptRide({
       rideId: req.params.rideId,
       driverId: driverId._id,

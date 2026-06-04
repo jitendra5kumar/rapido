@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ride Events Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-6 rounded-2xl shadow-xl w-[500px]">
+
+  <h1 class="text-2xl font-bold mb-4 text-center">
+    🚗 Ride Events Test
+  </h1>
+
+  <div class="mb-4">
+    <label class="block text-sm font-bold mb-2">User ID (for listening)</label>
+    <input id="userId" class="w-full border p-2 rounded" placeholder="e.g., 6a119c879fdc3b026c5069ba" />
+  </div>
+
+  <div class="flex gap-2 mb-4">
+    <button onclick="connectSocket()" class="bg-blue-500 text-white px-3 py-2 rounded w-full">
+      Connect & Join
+    </button>
+    <button onclick="clearLog()" class="bg-gray-500 text-white px-3 py-2 rounded w-full">
+      Clear Log
+    </button>
+  </div>
+
+  <div class="mb-4">
+    <label class="block text-sm font-bold mb-2">All Rooms:</label>
+    <div id="rooms" class="bg-gray-200 p-2 rounded text-xs h-20 overflow-y-auto">
+      (rooms will appear here)
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label class="block text-sm font-bold mb-2">Socket Info:</label>
+    <div id="socketInfo" class="bg-gray-200 p-2 rounded text-xs h-20 overflow-y-auto">
+      (socket info will appear here)
+    </div>
+  </div>
+
+  <!-- LOG -->
+  <div class="bg-black text-green-400 p-2 h-64 overflow-y-auto text-xs rounded font-mono">
+    <div id="log"></div>
+  </div>
+
+</div>
+
+<script>
+let socket;
+
+function log(msg) {
+  const logDiv = document.getElementById("log");
+  const timestamp = new Date().toLocaleTimeString();
+  logDiv.innerHTML += `<div>[${timestamp}] ${msg}</div>`;
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function updateSocketInfo() {
+  if (!socket) {
+    document.getElementById("socketInfo").innerHTML = "Not connected";
+    return;
+  }
+  const info = `
+    ID: ${socket.id}<br/>
+    Connected: ${socket.connected}<br/>
+    UserId: ${socket.userId || 'N/A'}<br/>
+    Role: ${socket.role || 'N/A'}
+  `;
+  document.getElementById("socketInfo").innerHTML = info;
+}
+
+function updateRooms() {
+  if (!socket) {
+    document.getElementById("rooms").innerHTML = "Not connected";
+    return;
+  }
+  // On client side, we can see which rooms THIS socket has joined
+  const rooms = socket.rooms ? Array.from(socket.rooms) : [];
+  document.getElementById("rooms").innerHTML = rooms.map(r => `<div>✓ ${r}</div>`).join('') || "No rooms joined yet";
+}
+
+function connectSocket() {
+  if (socket && socket.connected) {
+    log("✅ Already connected: " + socket.id);
+    return;
+  }
+
+  const userId = document.getElementById("userId").value.trim();
+  if (!userId) {
+    log("❌ Please enter User ID");
+    return;
+  }
+
+  const socketUrl = window.location.protocol === "file:"
+    ? "http://192.168.31.185:5000"
+    : window.location.origin;
+
+  log(`🔌 Connecting to: ${socketUrl}`);
+
+  socket = io(socketUrl, {
+    auth: {
+      userId: userId,
+      role: "user"
+    },
+    transports: ["websocket", "polling"],
+  });
+
+  socket.on("connect", () => {
+    log(`✅ Connected: ${socket.id}`);
+    socket.userId = userId;
+    socket.role = "user";
+    updateSocketInfo();
+    updateRooms();
+  });
+
+  socket.on("disconnect", (reason) => {
+    log(`❌ Disconnected: ${reason}`);
+  });
+
+  socket.on("connect_error", (error) => {
+    log(`⚠️ Error: ${error.message}`);
+  });
+
+  // ===== RIDE EVENTS =====
+  socket.on("ride:created", (data) => {
+    log(`📍 [RIDE:CREATED] ${JSON.stringify(data)}`);
+  });
+
+  socket.on("ride:accepted", (data) => {
+    log(`✅ [RIDE:ACCEPTED] ${JSON.stringify(data)}`);
+  });
+
+  socket.on("ride:arrived", (data) => {
+    log(`🚗 [RIDE:ARRIVED] ${JSON.stringify(data)}`);
+  });
+
+  socket.on("ride:started", (data) => {
+    log(`▶️ [RIDE:STARTED] ${JSON.stringify(data)}`);
+  });
+
+  socket.on("ride:completed", (data) => {
+    log(`✔️ [RIDE:COMPLETED] ${JSON.stringify(data)}`);
+  });
+
+  socket.on("ride:cancelled", (data) => {
+    log(`❌ [RIDE:CANCELLED] ${JSON.stringify(data)}`);
+  });
+
+
+  // Join the user room
+  socket.emit("join", {
+    userId: userId,
+    role: "user"
+  });
+
+  log(`📤 Sent join event for userId: ${userId}`);
+}
+
+function clearLog() {
+  document.getElementById("log").innerHTML = "";
+}
+
+// Update info every 2 seconds
+setInterval(() => {
+  updateSocketInfo();
+  updateRooms();
+}, 2000);
+</script>
+
+</body>
+</html>

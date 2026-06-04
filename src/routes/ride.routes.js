@@ -24,6 +24,7 @@ router.post(
 );
 
 router.get('/user/my', rideController.getMyRides);
+router.get('/user/recent', rideController.getRecentRides);
 router.get('/:rideId', getRide, handleValidationErrors, rideController.getRide);
 router.get('/', rideController.getAllRides);
 router.put('/:rideId', requireRoles('admin', 'sub_admin', 'driver', 'rider'), getRide, updateRide, handleValidationErrors, rideController.updateRide);
