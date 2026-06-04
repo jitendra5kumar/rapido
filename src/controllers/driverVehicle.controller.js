@@ -36,7 +36,28 @@ export const uploadDriverVehicle = async (req, res) => {
       payload.vehicleImages = imageUrls;
     }
 
-    const vehicle = await createOrUpdateVehicle(user_id, payload);
+
+    const vehicle = await createOrUpdateVehicle(
+      user_id,
+      payload
+    );
+
+    // Driver document nikalo
+
+    if (vehicle) {
+      await User.findByIdAndUpdate(
+        user_id,
+        {
+          driver_id: vehicle._id,
+        }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Vehicle uploaded successfully",
+      data: vehicle,
+    });
 
     return res.status(200).json({
       success: true,

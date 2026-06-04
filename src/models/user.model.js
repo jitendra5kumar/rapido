@@ -84,6 +84,12 @@ const userSchema = new mongoose.Schema(
       ref: "User",
     },
 
+    driver_id:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Driver",
+
+    },
+
 
 
     fcm_token: {
