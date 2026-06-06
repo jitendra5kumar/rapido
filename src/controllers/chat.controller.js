@@ -133,17 +133,11 @@ export const getUnreadCount = async (req, res) => {
         ? { driverId: userId }
         : { userId };
 
-    const chats = await Chat.find(query).select("unreadCount");
-
-    const totalUnread = chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
-
+ 
     res.json({
       success: true,
       message: "Unread count fetched successfully",
-      data: {
-        totalUnread,
-        chats,
-      },
+    
     });
   } catch (error) {
     res.status(500).json({

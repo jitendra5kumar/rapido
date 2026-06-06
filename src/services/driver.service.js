@@ -347,7 +347,7 @@ export const logoutService = async (userId) => {
     await User.findByIdAndUpdate(userId, {
         fcm_token: null,
         remember_token: null,
-        is_online: false,
+     
     });
 
     return true;

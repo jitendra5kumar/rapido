@@ -102,17 +102,26 @@ export const completeProfile = async (
 
   let user = await User.findOne({ phone });
   const update = {};
-
+  const pin = Math.floor(1000 + Math.random() * 9000).toString();
+  
   if (user) {
     if (!user.name && name) update.name = name;
     if (!user.gender && gender) update.gender = gender;
 
     if (referralCode) {
-      const existingCode = await User.findOne({ referral_code: referralCode });
-      if (existingCode && existingCode._id.toString() !== user._id.toString()) {
-        throw new Error('Referral code already in use');
+      const referrer = await User.findOne({ referral_code: referralCode.trim() });
+      if (!referrer) {
+        throw new Error('Invalid referral code');
       }
-      if (!user.referral_code) update.referral_code = referralCode;
+      if (referrer._id.toString() === user._id.toString()) {
+        throw new Error('Cannot use your own referral code');
+      }
+      if (!user.referred_by_id) {
+        update.referred_by_id = referrer._id;
+        referrer.totalReferrals = (referrer.totalReferrals || 0) + 1;
+        referrer.referralEarnings = (referrer.referralEarnings || 0) + 50;
+        await referrer.save();
+      }
     }
 
     if (Object.keys(update).length) {
@@ -120,20 +129,28 @@ export const completeProfile = async (
       user = await User.findById(user._id);
     }
   } else {
-    let uniqueReferralCode = referralCode;
+    let uniqueReferralCode = generateReferralCode();
     let isUnique = false;
 
     while (!isUnique) {
-      if (!uniqueReferralCode) {
-        uniqueReferralCode = generateReferralCode();
-      }
-
       const exists = await User.findOne({ referral_code: uniqueReferralCode });
       if (!exists) {
         isUnique = true;
       } else {
-        uniqueReferralCode = null;
+        uniqueReferralCode = generateReferralCode();
       }
+    }
+
+    let referredById = null;
+    if (referralCode) {
+      const referrer = await User.findOne({ referral_code: referralCode.trim() });
+      if (!referrer) {
+        throw new Error('Invalid referral code');
+      }
+      referredById = referrer._id;
+      referrer.totalReferrals = (referrer.totalReferrals || 0) + 1;
+      referrer.referralEarnings = (referrer.referralEarnings || 0) + 50;
+      await referrer.save();
     }
 
     user = await new User({
@@ -142,7 +159,9 @@ export const completeProfile = async (
       gender,
       role: 'rider',
       referral_code: uniqueReferralCode,
+      referred_by_id: referredById,
       is_verified: true,
+      pin,
     }).save();
   }
 

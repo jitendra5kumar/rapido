@@ -63,9 +63,28 @@ export const rideAction = [
 
 export const arriveRide = [
   param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
+  body('otp')
+    .isLength({ min: 4, max: 4 })
+    .withMessage('OTP must be 4 digits')
+    .isNumeric()
+    .withMessage('OTP must be numeric'),
 ];
 
 export const cancelRide = [
   param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
   body('cancelReason').isLength({ min: 1 }).withMessage('Cancel reason is required'),
+];
+
+export const updateDropLocation = [
+  param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
+  body('dropLocation.address').optional().isLength({ min: 1 }).withMessage('Drop address must be a non-empty string'),
+  body('dropLocation.coordinates')
+    .optional()
+    .isArray({ min: 2, max: 2 })
+    .withMessage('dropLocation.coordinates must be an array with two numbers [lng, lat]'),
+  // allow legacy short form 'drop.longitude'/'drop.latitude' via optional checks
+  body('drop.longitude').optional().isFloat().withMessage('drop.longitude must be a number'),
+  body('drop.latitude').optional().isFloat().withMessage('drop.latitude must be a number'),
+  body('distanceMeters').optional().isFloat({ min: 0 }).withMessage('distanceMeters must be a non-negative number'),
+  body('durationMinutes').optional().isFloat({ min: 0 }).withMessage('durationMinutes must be a non-negative number'),
 ];

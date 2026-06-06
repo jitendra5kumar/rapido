@@ -75,9 +75,8 @@ export const createRide =
               ?.status ||
             'pending',
 
-          baseFare: Number(
-            data.payment
-              ?.fare || 0
+          fare: Number(
+            data.fare || 0
           ),
 
           tax: Number(
@@ -101,8 +100,7 @@ export const createRide =
           ),
 
           totalFare: Number(
-            data.payment
-              ?.totalFare || 0
+            data?.totalFare || 0
           ),
         },
 
@@ -132,33 +130,35 @@ export const getRides =
         filters.userId;
     }
 
-    if (filters.driverId) {
-      query.driverId =
-        filters.driverId;
-    }
 
     if (filters.status) {
       query.status =
         filters.status;
     }
 
-    return await Ride.find(query)
+    const limit =
+      filters.limit &&
+      Number.isFinite(Number(filters.limit))
+        ? Number(filters.limit)
+        : null;
 
-      .populate(
-        'userId',
-        'name phone'
-      )
-
-      .populate(
-        'driverId',
-        'name phone'
-      )
-
+    const queryBuilder = Ride.find(query)
+      .populate({
+        path: "userId",
+        select: "name phone driver_id",
+        populate: {
+          path: "driver_id",
+          select: "numberPlate rcNumber vehicleName",
+        },
+      })
+      .populate("driverId", "name phone")
       .sort({
         createdAt: -1,
       })
-
+      .limit(Number(limit))
       .lean();
+
+    return await queryBuilder;
   };
 
 
@@ -174,13 +174,20 @@ export const getRideById =
   async (id) => {
 
     return await Ride.findById(id)
-
-      .populate("userId", "name phone")
-
+      .populate({
+        path: "userId",
+        select: "name phone driver_id",
+        populate: {
+          path: "driver_id",
+          select: "numberPlate rcNumber vehicleName",
+        },
+      })
       .populate("driverId", "name phone")
-      .populate("vehicleId", "name vehicleImage");
+      .populate("vehicleId", "name vehicleImage")
+      .lean();
   };
 
+;
 export const updateRide =
   async (id, data) => {
 
@@ -313,6 +320,7 @@ export const arriveRide =
   async ({
     rideId,
     driverId,
+    otp,
   }) => {
     const ride = await Ride.findOne({
       _id: rideId,
@@ -333,6 +341,7 @@ export const arriveRide =
         $set: {
           status: RIDE_STATUS.ARRIVED,
           arrivedAt: new Date(),
+          otp,
         },
       },
       {

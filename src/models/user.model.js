@@ -37,9 +37,16 @@ const userSchema = new mongoose.Schema(
       required: false,
     },
 
+    totalReferrals: {
+      type: Number,
+      default: 0,
+    },
+    referralEarnings: {
+      type: Number,
+      default: 0,
+    },
+    
     // ⚠️ avoid in production
-
-
     gender: {
       type: String,
       enum: ["Male", "Female", "Other"],
@@ -53,9 +60,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
-    otp: {
-      type: String,
-    
+    pin: {
+      type: String,    
     },
 
     is_verified: {
@@ -87,11 +93,8 @@ const userSchema = new mongoose.Schema(
     driver_id:{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Driver",
-
     },
-
-
-
+    
     fcm_token: {
       type: String,
     },
@@ -109,11 +112,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
     },
 
-    is_online: {
-      type: Boolean,
-      default: false,
-    },
-
+  
     is_on_ride: {
       type: Boolean,
       default: false,

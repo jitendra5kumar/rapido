@@ -13,6 +13,12 @@ export const getProfile = async (userId) => {
     email: user.email,
     phone: user.phone,
     role: user.role,
+    pin: user.pin,
+    referral_code: user.referral_code,
+    wallet: user.wallet,
+    profile_image_id: user.profile_image_id,
+    referralEarnings: user.referralEarnings,
+    totalReferrals: user.totalReferrals,
     createdAt: user.createdAt,
   };
 };

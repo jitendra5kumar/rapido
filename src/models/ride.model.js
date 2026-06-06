@@ -49,7 +49,7 @@ const rideSchema = new mongoose.Schema(
         default: "pending",
       },
 
-      baseFare: Number,
+      fare: Number,
       tax: Number,
       platformFee: Number,
       zoneCharge: Number,

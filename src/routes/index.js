@@ -21,6 +21,7 @@ import Notification  from './notification.routes.js';
 import walletRoutes  from './wallet.route.js';
 import chatRoutes from './chat.routes.js';
 import adminChatRoutes from './adminChat.routes.js';
+import userAdminChatRoutes from './userAdminChat.routes.js';
 import reviewRoutes from './review.routes.js';
 
 
@@ -52,6 +53,7 @@ router.use('/wallet', walletRoutes)
 router.use('/driver-reports', driverReportRoutes)
 router.use('/chat', chatRoutes)
 router.use('/admin-chat', adminChatRoutes)
+router.use('/user-admin-chat', userAdminChatRoutes)
 router.use('/review', reviewRoutes)
 
 

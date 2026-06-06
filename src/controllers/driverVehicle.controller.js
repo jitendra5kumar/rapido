@@ -5,13 +5,14 @@ export const uploadDriverVehicle = async (req, res) => {
   try {
     const user_id = req.user.id; // auth middleware required
 
-    const { rcNumber, numberPlate, seatCount, serviceId, vehicleTypeId } = req.body;
+    const { rcNumber, numberPlate, vehicleName, seatCount, serviceId, vehicleTypeId } = req.body;
 
     const files = req.files;
 
     let payload = {
       rcNumber,
       numberPlate,
+      vehicleName,
       seatCount,
       serviceId,
       vehicleTypeId,

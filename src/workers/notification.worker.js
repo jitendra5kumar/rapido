@@ -23,6 +23,7 @@ const BLOCK_MS = 5000;
 const CLAIM_IDLE_MS = 30000;
 const READ_COUNT = 10;
 const NOTIFICATION_EXPIRE_MS = 300000;
+const NOTIFICATION_RETENTION_HOURS = 24;
 
 let isRunning = true;
 
@@ -66,6 +67,40 @@ const safeParseJson = (value) => {
     return value ? JSON.parse(value) : {};
   } catch (err) {
     return {};
+  }
+};
+
+const getServerTimeMs = async () => {
+  const time = await redis.time();
+  if (!time || time.length < 2) {
+    return Date.now();
+  }
+
+  const seconds = Number(time[0]);
+  const microseconds = Number(time[1]);
+  return seconds * 1000 + Math.floor(microseconds / 1000);
+};
+
+const trimOldNotifications = async () => {
+  try {
+    const nowMs = await getServerTimeMs();
+    const cutoffMs = nowMs - NOTIFICATION_RETENTION_HOURS * 60 * 60 * 1000;
+    const minId = `${cutoffMs}-0`;
+
+    const removed = await redis.xtrim(
+      NOTIFICATION_STREAM,
+      'MINID',
+      '~',
+      minId
+    );
+
+    if (removed) {
+      console.log(
+        `Trimmed ${removed} old notification entries older than ${NOTIFICATION_RETENTION_HOURS}h`
+      );
+    }
+  } catch (err) {
+    console.error('Failed trimming old notification stream entries:', err.message || err);
   }
 };
 
@@ -255,6 +290,7 @@ const startLoop = async () => {
       }
 
       await Promise.allSettled(tasks);
+      await trimOldNotifications();
     } catch (err) {
       console.error('Notification worker loop failed:', err.message || err);
       await sleep(2000);

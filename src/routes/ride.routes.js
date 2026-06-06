@@ -7,7 +7,9 @@ import {
   getRide,
   updateRideStatus,
   rideAction,
+  arriveRide,
   cancelRide,
+  updateDropLocation,
 } from '../validators/ride.validator.js';
 import { handleValidationErrors } from '../middlewares/error.middleware.js';
 
@@ -29,9 +31,11 @@ router.get('/:rideId', getRide, handleValidationErrors, rideController.getRide);
 router.get('/', rideController.getAllRides);
 router.put('/:rideId', requireRoles('admin', 'sub_admin', 'driver', 'rider'), getRide, updateRide, handleValidationErrors, rideController.updateRide);
 router.post('/:rideId/accept', requireRoles('admin', 'sub_admin', 'driver'), rideAction, handleValidationErrors, rideController.acceptRide);
-router.post('/:rideId/arrive', requireRoles('admin', 'sub_admin', 'driver'), rideAction, handleValidationErrors, rideController.arriveRide);
+router.post('/:rideId/arrive', requireRoles('admin', 'sub_admin', 'driver'), rideAction, arriveRide, handleValidationErrors, rideController.arriveRide);
 router.post('/:rideId/complete', requireRoles('admin', 'sub_admin', 'driver'), getRide, handleValidationErrors, rideController.completeRide);
 router.patch('/:rideId/status', requireRoles('admin', 'sub_admin', 'driver'), updateRideStatus, handleValidationErrors, rideController.updateRideStatusOtp);
 router.post('/:rideId/cancel', requireRoles('admin', 'sub_admin', 'driver', 'rider'), cancelRide, handleValidationErrors, rideController.cancelRide);
+
+router.patch('/:rideId/drop', requireRoles('admin', 'sub_admin', 'rider'), getRide, updateDropLocation, handleValidationErrors, rideController.updateDropLocation);
 
 export default router;

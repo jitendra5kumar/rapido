@@ -30,7 +30,7 @@ export const initChatSocket = (io) => {
       try {
         const { chatId, senderId, senderType, message, rideId } = data;
         const roomName = `chat_${chatId}`;
-
+console.log(`Received message in chat ${chatId} from ${senderType} ${senderId}: ${message}`);
         // Save message to database
         const updatedChat = await chatService.saveMessage(
           chatId,
@@ -79,7 +79,7 @@ export const initChatSocket = (io) => {
       try {
         const { chatId, userId } = data;
         const roomName = `chat_${chatId}`;
-
+console.log(`Marking messages as read in chat ${chatId} for user ${userId}`);
         await chatService.markMessagesAsRead(chatId, userId);
 
         // Notify other user that messages are read
@@ -99,7 +99,7 @@ export const initChatSocket = (io) => {
     socket.on("typing", (data) => {
       const { chatId, userId, role } = data;
       const roomName = `chat_${chatId}`;
-
+console.log(`User ${userId} (${role}) is typing in chat ${chatId}`);
       socket.to(roomName).emit("user_typing", {
         userId,
         role,

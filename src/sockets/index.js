@@ -210,9 +210,6 @@ const setupSockets = (server) => {
             }
           );
 
-          // Optional:
-          // Emit live location to active rides
-
           if (
             socket.activeRideId
           ) {
