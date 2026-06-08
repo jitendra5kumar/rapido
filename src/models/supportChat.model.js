@@ -1,17 +1,15 @@
 import mongoose from "mongoose";
 
-const userAdminChatSchema = new mongoose.Schema(
+const supportChatSchema = new mongoose.Schema(
   {
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
     },
     messages: [
@@ -57,8 +55,8 @@ const userAdminChatSchema = new mongoose.Schema(
   }
 );
 
-userAdminChatSchema.index({ adminId: 1, userId: 1 }, { unique: true });
+supportChatSchema.index({ adminId: 1, userId: 1 }, { unique: true });
 
-const UserAdminChat = mongoose.model("UserAdminChat", userAdminChatSchema);
+const SupportChat = mongoose.model("SupportChat", supportChatSchema);
 
-export default UserAdminChat;
+export default SupportChat;

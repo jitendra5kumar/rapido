@@ -24,14 +24,6 @@ const driverReportSchema = new mongoose.Schema(
     reason: {
       type: String,
       required: true,
-      enum: [
-        "wrong_fare",
-        "driver_behavior",
-        "vehicle_issue",
-        "route_issue",
-        "payment_issue",
-        "other",
-      ],
     },
 
     description: {

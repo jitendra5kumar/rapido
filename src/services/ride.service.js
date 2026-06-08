@@ -21,6 +21,70 @@ export const RIDE_STATUS = {
 
 export const createRide =
   async (data) => {
+    // Normalize stops provided in various formats into GeoJSON Points
+    const normalizeStops = (input) => {
+      const out = [];
+      if (!input) return out;
+
+      const pushItem = (item) => {
+        if (!item) return;
+        // latitude/longitude or lat/lng
+        const lat = item.latitude ?? item.lat;
+        const lng = item.longitude ?? item.lng ?? item.long;
+
+        if (lat !== undefined && lng !== undefined) {
+          out.push({
+            type: 'Point',
+            coordinates: [Number(lng), Number(lat)],
+            address: item.address || '',
+            title: item.title || '',
+          });
+          return;
+        }
+
+        // Already GeoJSON-like
+        if (item.type === 'Point' && Array.isArray(item.coordinates)) {
+          out.push({
+            type: 'Point',
+            coordinates: item.coordinates,
+            address: item.address || '',
+            title: item.title || '',
+          });
+        }
+      };
+
+      if (Array.isArray(input)) {
+        input.forEach(pushItem);
+        return out;
+      }
+
+      if (typeof input === 'object') {
+        // numeric-keyed object like {0: {...}, 1: {...}}
+        const keys = Object.keys(input);
+        const numericKeys = keys.filter(k => /^\d+$/.test(k));
+        if (numericKeys.length) {
+          numericKeys.sort((a,b)=>Number(a)-Number(b)).forEach(k => pushItem(input[k]));
+          return out;
+        }
+
+        // single stop object
+        pushItem(input);
+        return out;
+      }
+
+      return out;
+    };
+
+    const stopsArray = normalizeStops(data.stops ?? data.stop ?? null);
+    // also allow top-level latitude/longitude/title as a single stop
+    if ((!stopsArray || stopsArray.length === 0) && data.latitude !== undefined && data.longitude !== undefined) {
+      stopsArray.push({
+        type: 'Point',
+        coordinates: [Number(data.longitude), Number(data.latitude)],
+        address: data.address || '',
+        title: data.title || '',
+      });
+    }
 
     const ride =
       await Ride.create({
@@ -61,6 +125,8 @@ export const createRide =
             data.dropLocation
               .title,
         },
+        // Stops (if any) normalized into GeoJSON Points
+        stops: stopsArray,
 
         status:
           RIDE_STATUS.SEARCHING,

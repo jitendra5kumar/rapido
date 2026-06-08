@@ -16,12 +16,13 @@ import driverReportRoutes from './driverReport.routes.js';
 import transactionReportRoutes from './transactionReport.routes.js';
 import appSettingRoutes from './appSetting.routes.js';
 import couponRoutes from './coupon.routes.js';
+import subAdminSettingRoutes from './subAdminSetting.routes.js';
 import DriverVehicle from "./driverVehicle.route.js"
 import Notification  from './notification.routes.js';
 import walletRoutes  from './wallet.route.js';
 import chatRoutes from './chat.routes.js';
 import adminChatRoutes from './adminChat.routes.js';
-import userAdminChatRoutes from './userAdminChat.routes.js';
+import supportChatRoutes from './supportChat.routes.js';
 import reviewRoutes from './review.routes.js';
 
 
@@ -36,13 +37,12 @@ router.use('/city', cityRoutes);
 router.use('/alert', alertRoutes);
 router.use('/vehicle-custom', vehicleCustomRoutes);
 router.use('/vehicle', vehicletype);
-// router.use('/driver', driverRoutes);
-// router.use('/service', serviceRoute);
-// router.use('/driver-doc', driverdocRoutes);
+
 router.use('/ride', rideRoutes);
 router.use('/ride-reports', rideReportRoutes);
 router.use('/transaction-reports', transactionReportRoutes);
 router.use('/app-settings', appSettingRoutes);
+router.use('/subadmin-settings', subAdminSettingRoutes);
 router.use('/coupon-codes', couponRoutes);
 router.use('/driver', driverRoutes)
 router.use('/services', serviceRoute)
@@ -53,7 +53,7 @@ router.use('/wallet', walletRoutes)
 router.use('/driver-reports', driverReportRoutes)
 router.use('/chat', chatRoutes)
 router.use('/admin-chat', adminChatRoutes)
-router.use('/user-admin-chat', userAdminChatRoutes)
+router.use('/support-chat', supportChatRoutes)
 router.use('/review', reviewRoutes)
 
 

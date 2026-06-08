@@ -53,6 +53,7 @@ export const adminRegister = asyncHandler(async (req, res) => {
 
 export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
   const result = await authService.adminLogin({ email, password });
   response.success(res, 'Admin logged in successfully', result);
 });

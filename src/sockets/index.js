@@ -13,9 +13,12 @@ import {
 import {
   getDriversByVehicleRoute,
 } from '../services/vehicle.service.js';
+import Ride from "../models/ride.model.js";
 
 import { initChatSocket } from './chat.socket.js';
 import { initAdminChatSocket } from './adminChat.socket.js';
+import { initSupportChatSocket } from './supportChat.socket.js';
+import { initRideSocket } from './ride.socket.js';
 
 const DRIVER_HEARTBEAT_TTL = 15;
 
@@ -29,6 +32,8 @@ const setupSockets = (server) => {
   // Initialize chat sockets
   initChatSocket(io);
   initAdminChatSocket(io);
+  initSupportChatSocket(io);
+  initRideSocket(io);
 
   io.on('connection', (socket) => {
 
@@ -270,6 +275,66 @@ const setupSockets = (server) => {
         }
       }
     );
+
+    // update extra increase fare
+     socket.on("update_extra_fare", async (data) => {
+          try {
+            const { rideId, extraIncreaseFare, userId } = data;
+            const roomName = `ride:${rideId}`;
+    
+            if (!rideId || extraIncreaseFare === undefined) {
+              socket.emit("error", {
+                message: "rideId and extraIncreaseFare are required",
+              });
+              return;
+            }
+    
+            // Update ride with extra fare
+            const ride = await Ride.findById(rideId);
+    
+            if (!ride) {
+              socket.emit("error", {
+                message: "Ride not found",
+              });
+              return;
+            }
+    
+            // Update extra increase fare
+            ride.payment.extraIncreaseFare = Number(extraIncreaseFare);
+    
+            // Recalculate total fare
+            const totalFare =
+              (ride.payment.fare || 0) +
+              (ride.payment.tax || 0) +
+              (ride.payment.platformFee || 0) +
+              (ride.payment.zoneCharge || 0) +
+              (ride.payment.driverTip || 0) +
+              (ride.payment.extraIncreaseFare || 0);
+    
+            ride.payment.totalFare = totalFare;
+    
+            await ride.save();
+    
+            console.log(
+              `Extra fare updated for ride ${rideId}: ${extraIncreaseFare}, Total fare: ${totalFare}`
+            );
+    
+            // Emit to all users in the ride room
+            io.to(roomName).emit("extra_fare_updated", {
+              rideId,
+              extraIncreaseFare: ride.payment.extraIncreaseFare,
+              totalFare: ride.payment.totalFare,
+              updatedBy: userId,
+              timestamp: new Date(),
+            });
+          } catch (error) {
+            console.error("Error updating extra fare:", error);
+            socket.emit("error", {
+              message: "Failed to update extra fare",
+              error: error.message,
+            });
+          }
+        });
 
     // =====================================================
     // LEAVE RIDE ROOM
