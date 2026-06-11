@@ -42,22 +42,42 @@ const driverDocumentSchema = new mongoose.Schema(
         },
 
         rc: {
-            url: String,
-            number: String,
-            status: {
-                type: String,
-                enum: statusEnum,
-                default: "pending",
+            front: {
+                url: String,
+                number: String,
+                status: {
+                    type: String,
+                    enum: statusEnum,
+                    default: "pending",
+                },
+            },
+            back: {
+                url: String,
+                status: {
+                    type: String,
+                    enum: statusEnum,
+                    default: "pending",
+                },
             },
         },
 
         dl: {
-            url: String,
-            number: String,
-            status: {
-                type: String,
-                enum: statusEnum,
-                default: "pending",
+            front: {
+                url: String,
+                number: String,
+                status: {
+                    type: String,
+                    enum: statusEnum,
+                    default: "pending",
+                },
+            },
+            back: {
+                url: String,
+                status: {
+                    type: String,
+                    enum: statusEnum,
+                    default: "pending",
+                },
             },
         },
 
@@ -107,7 +127,5 @@ driverDocumentSchema.pre("validate", async function (next) {
     }
 });
 
-export const DriverDocument = mongoose.model(
-    "DriverDocument",
-    driverDocumentSchema
-);  
+
+export default mongoose.model("DriverDocument", driverDocumentSchema);

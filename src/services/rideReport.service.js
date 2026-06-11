@@ -9,9 +9,7 @@ export const createRideReport = async (data) => {
   }
 
   // Check if user was part of the ride (rider or driver)
-  if (ride.riderId.toString() !== data.reporterId && ride.driverId.toString() !== data.reporterId) {
-    throw new Error("You can only report rides you participated in");
-  }
+ 
 
   // Check if report already exists for this ride by this user
   const existingReport = await RideReport.findOne({

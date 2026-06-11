@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-router.post("/", createDriverReportValidator, handleValidationErrors, driverReportController.createDriverReportController);
+router.post("/",  driverReportController.createDriverReportController);
 
 router.get("/", requireRoles("admin", "sub_admin"), driverReportController.getDriverReportsController);
 

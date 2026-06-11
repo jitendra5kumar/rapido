@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import User from "../models/user.model.js";
+import DriverDocument from "../models/driverDocument.model.js";
 import bcrypt from "bcryptjs";
 import { jwt } from "../utils/index.js";
 import otpCache from "../cache/otp.cache.js";
@@ -302,17 +303,46 @@ export const loginDriverService = async ({
 // GET PROFILE
 // ==============================
 export const getProfileService = async (userId) => {
-
     const user = await User.findById(userId)
         .populate("profile_image_id")
-        .populate("service_id service_category_id")
-        .populate("referred_by_id");
+        .populate("referred_by_id")
+        .populate({
+            path: "driver_id",
+            populate: [
+                { path: "serviceId" },
+                { path: "vehicleTypeId" }
+            ]
+        });
 
     if (!user) {
         throw new Error("User not found");
     }
 
-    return user;
+    const driverDoc = await DriverDocument.findOne({ user_id: userId });
+    const userObj = user.toObject();
+    
+    // Check if driving license is uploaded
+    const dlUploaded = Boolean(driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url);
+    const profileSetupComplete = Boolean(user.name && user.gender && user.profile_image_id);
+    const vehicleUploaded = Boolean(user.driver_id);
+    const rcUploaded = Boolean(driverDoc?.rc?.front?.url && driverDoc?.rc?.front?.number);
+    const aadhaarPanUploaded = Boolean(driverDoc?.aadhaar?.front?.url || driverDoc?.pan?.url);
+
+    userObj.documents = {
+      dlUploaded,
+      profileSetupComplete,
+      vehicleUploaded,
+      rcUploaded,
+      aadhaarPanUploaded,
+      isVerified: Boolean(user.is_verified),
+    };
+
+    userObj.driverDocument = driverDoc;
+
+    // Keep top-level compatibility
+    userObj.isVerified = Boolean(user.is_verified);
+
+    return userObj;
 };
 
 // ==============================

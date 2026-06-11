@@ -4,6 +4,7 @@ import Ride from "../models/ride.model.js";
 
 export const createDriverReport = async (data) => {
   const driver = await Driver.findById(data.driverId);
+  console.log(driver);
   if (!driver) {
     throw new Error("Driver not found");
   }

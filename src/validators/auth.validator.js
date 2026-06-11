@@ -8,6 +8,10 @@ export const verifyOtp = [
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
   body('otp').isLength({ min: 4, max: 4 }).isNumeric().withMessage('OTP must be 4 digits'),
 ];
+export const verifyOtp2 = [
+  body('phone').isMobilePhone().withMessage('Invalid phone number'),
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric().withMessage('OTP must be 6 digits'),
+];
 
 export const completeProfile = [
   body('phone').isMobilePhone().withMessage('Invalid phone number'),

@@ -1,4 +1,4 @@
-import { DriverDocument } from "../models/driverDocument.model.js";
+import  DriverDocument  from "../models/driverDocument.model.js";
 
 export const createOrUpdateDriverDocument = async (user_id, payload) => {
   const doc = await DriverDocument.findOneAndUpdate(
@@ -44,8 +44,10 @@ export const updateDocumentStatusService = async (
     doc.aadhaar?.front?.status,
     doc.aadhaar?.back?.status,
     doc.pan?.status,
-    doc.rc?.status,
-    doc.dl?.status,
+    doc.rc?.front?.status,
+    doc.rc?.back?.status,
+    doc.dl?.front?.status,
+    doc.dl?.back?.status,
     doc.insurance?.status,
   ];
 

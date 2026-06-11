@@ -9,8 +9,9 @@ export const createDriverReport = [
     .isMongoId()
     .withMessage("Ride ID must be a valid MongoDB ID"),
   body("reason")
-    .isIn(["wrong_fare", "driver_behavior", "vehicle_issue", "route_issue", "payment_issue", "other"])
-    .withMessage("Invalid reason"),
+    .optional()
+    .isString()
+    .withMessage("Reason must be a string"),
   body("description")
     .optional()
     .isLength({ min: 10, max: 500 })

@@ -45,74 +45,29 @@ const setupSockets = (server) => {
     // JOIN USER ROOM
     // =====================================================
 
-    socket.on(
-      'join',
+   socket.on("join", async ({ userId, role }) => {
+     socket.userId = userId;
+     socket.role = role;
 
-      async (data = {}) => {
+     socket.join(userId.toString());
 
-        try {
+     await redis.set(`socket:${userId}`, socket.id, "EX", 86400);
 
-          const {
-            userId,
-            role,
-          } = data;
+     console.log(`${role} joined: ${userId}`);
+   });
 
-          if (!userId) {
-            return;
-          }
+   socket.on("driver:online", async ({ driverId }) => {
+     await redis.sadd("drivers:online", driverId.toString());
 
-          socket.userId =
-            userId.toString();
+     await redis.set(
+       `driver:lastSeen:${driverId}`,
+       Date.now(),
+       "EX",
+       DRIVER_HEARTBEAT_TTL,
+     );
 
-          socket.role = role;
-
-          // User personal room
-          socket.join(
-            userId.toString()
-          );
-
-          // Store socket mapping
-          await redis.set(
-            `socket:${userId}`,
-            socket.id,
-            'EX',
-            86400
-          );
-
-          // DRIVER ONLINE
-          if (role === 'driver') {
-
-            socket.driverId =
-              userId.toString();
-
-            // Redis online
-            await redis.sadd(
-              'drivers:online',
-              userId.toString()
-            );
-
-            // Heartbeat
-            await redis.set(
-              `driver:lastSeen:${userId}`,
-              Date.now(),
-              'EX',
-              DRIVER_HEARTBEAT_TTL
-            );
-
-            console.log(
-              `Driver online: ${userId}`
-            );
-          }
-
-        } catch (err) {
-
-          console.error(
-            'join error:',
-            err.message || err
-          );
-        }
-      }
-    );
+     console.log(`Driver online: ${driverId}`);
+   });
 
     // =====================================================
     // HEARTBEAT

@@ -1,5 +1,7 @@
 import * as driverService from "../services/driver.service.js";
-
+import * as authService from "../services/auth.service.js";
+import { asyncHandler } from '../utils/index.js';
+import { response } from '../utils/index.js';
 export const createDriver = async (req, res) => {
     try {
         const data = await driverService.createDriverService(req.body);
@@ -14,8 +16,8 @@ export const createDriver = async (req, res) => {
 };
 
 export const sendOtp = (async (req, res) => {
-    const { phone, name, password } = req.body;
-    await authService.sendOtp(phone, name, password);
+    const { phone, driver=6, channel = 'sms' } = req.body;
+    await authService.sendOtp(phone, driver, channel);
     response.success(res, 'OTP sent successfully');
 });
 

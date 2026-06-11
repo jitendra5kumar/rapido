@@ -23,7 +23,7 @@ export const uploadToImgBB = async (fileBuffer) => {
       }
     );
 
-    console.log("ImgBB SUCCESS:", response.data);
+  
 
     const imageUrl =
       response.data?.data?.url ||

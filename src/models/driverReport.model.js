@@ -23,7 +23,7 @@ const driverReportSchema = new mongoose.Schema(
 
     reason: {
       type: String,
-      required: true,
+      // required: true,
     },
 
     description: {

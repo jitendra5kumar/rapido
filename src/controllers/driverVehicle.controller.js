@@ -1,16 +1,16 @@
 import { uploadToImgBB } from "../services/imgbb.service.js";
 import { createOrUpdateVehicle, updateVehicleStatus } from "../services/driverVehicle.service.js";
+import User from "../models/user.model.js";
 
 export const uploadDriverVehicle = async (req, res) => {
   try {
     const user_id = req.user.id; // auth middleware required
 
-    const { rcNumber, numberPlate, vehicleName, seatCount, serviceId, vehicleTypeId } = req.body;
+    const { numberPlate, vehicleName, seatCount, serviceId, vehicleTypeId } = req.body;
 
     const files = req.files;
 
     let payload = {
-      rcNumber,
       numberPlate,
       vehicleName,
       seatCount,

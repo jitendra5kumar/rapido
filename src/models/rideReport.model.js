@@ -15,19 +15,17 @@ const rideReportSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-
+driverId :{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  required: true,
+  index: true,
+},
     reason: {
       type: String,
       required: true,
       trim: true,
-      enum: [
-        "wrong_fare",
-        "driver_behavior",
-        "vehicle_issue",
-        "route_issue",
-        "payment_issue",
-        "other",
-      ],
+     
     },
 
     description: {

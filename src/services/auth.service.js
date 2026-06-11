@@ -1,6 +1,7 @@
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
+import DriverDocument from '../models/driverDocument.model.js';
 import otpCache from '../cache/otp.cache.js';
 import sessionCache from '../cache/session.cache.js';
 import { jwt } from '../utils/index.js';
@@ -13,11 +14,14 @@ const generateReferralCode = () => {
 };
 
 
-export const sendOtp = async (phone) => {
+export const sendOtp = async (phone, driver, channel = 'sms') => {
   if (!phone) throw new Error('Phone number is required');
 
   // generate 4-digit OTP locally and store in Redis
-  const otp = Math.floor(1000 + Math.random() * 9000).toString();
+ 
+  const otp = driver
+    ? Math.floor(100000 + Math.random() * 900000).toString()
+    : Math.floor(1000 + Math.random() * 9000).toString();
   await otpCache.setOtp(phone, otp);
 
   // keep minimal provider metadata (sessionId when available)
@@ -28,12 +32,18 @@ export const sendOtp = async (phone) => {
       if (!formattedPhone.startsWith('+')) {
         formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
       }
-      const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
-      const template = process.env.TWOFA_TEMPLATE || 'OTP1';
-const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;      const response = await axios.get(url);
-      console.log('2factor response:', response.data);
-      if (response.data?.Status === 'Success') {
-        sessionId = response.data.Details;
+      if (channel === 'whatsapp') {
+        // Simulating WhatsApp OTP send (e.g. 2factor whatsapp addon / mock logs)
+        console.log(`[WhatsApp API] Sending OTP ${otp} to ${formattedPhone} via WhatsApp`);
+      } else {
+        const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
+        const template = process.env.TWOFA_TEMPLATE || 'OTP1';
+        const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;
+        const response = await axios.get(url);
+        console.log('2factor response:', response.data);
+        if (response.data?.Status === 'Success') {
+          sessionId = response.data.Details;
+        }
       }
     }
   } catch (err) {
@@ -45,15 +55,16 @@ const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${format
     phone,
     provider: 'twofactor',
     sessionId,
+    channel,
   });
 
-  console.log(`OTP for ${phone}: ${otp}`);
+  console.log(`OTP (${channel}) for ${phone}: ${otp}`);
 
   return {
     success: true,
     provider: 'twofactor',
     sessionId,
-    message: 'OTP generated and stored',
+    message: `OTP generated and stored for ${channel}`,
   };
 };
 
@@ -73,7 +84,7 @@ export const verifyOtp = async (phone, otp) => {
   const isVerified = user ? Boolean(user.is_verified) : false;
   const result = { phone, otpVerified: true, is_verified: isVerified };
 
-  if (user && isVerified) {
+  if (user) {
     const token = jwt.generateToken({
       id: user._id,
       phone: user.phone,
@@ -82,6 +93,33 @@ export const verifyOtp = async (phone, otp) => {
 
     await sessionCache.setSession(user._id.toString(), token);
     result.token = token;
+
+    const driverDoc = await DriverDocument.findOne({ user_id: user._id });
+    const dlUploaded = Boolean(driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url);
+    const profileSetupComplete = Boolean(user.name && user.gender && user.profile_image_id);
+
+    const vehicleUploaded = Boolean(user.driver_id);
+
+    result.driver = {
+      id: user._id.toString(),
+      name: user.name || "",
+      phone: user.phone,
+      email: user.email,
+      gender: user.gender,
+      dob: user.dob,
+      profile_image_id: user.profile_image_id,
+      isVerified: isVerified,
+      isOnline: false,
+      rating: 5.0,
+      totalTrips: 0,
+      role: user.role,
+      documents: {
+        dlUploaded,
+        profileSetupComplete,
+        vehicleUploaded,
+        isVerified,
+      },
+    };
   }
 
   return result;

@@ -52,6 +52,10 @@ const userSchema = new mongoose.Schema(
       enum: ["Male", "Female", "Other"],
     },
 
+    dob: {
+      type: String,
+    },
+
     profile_image_id: {
      type:String
     },

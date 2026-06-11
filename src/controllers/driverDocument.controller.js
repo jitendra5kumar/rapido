@@ -4,7 +4,7 @@ import { createOrUpdateDriverDocument } from "../services/driverDocument.service
 // 👉 Upload Driver Documents
 export const uploadDriverDocuments = async (req, res) => {
     try {
-        const user_id = "req.user.id";
+        const user_id = req.user.id;
         const files = req.files;
         const body = req.body;
 
@@ -39,26 +39,40 @@ export const uploadDriverDocuments = async (req, res) => {
             }
         }
 
-        // RC
-        if (files?.rc?.[0]) {
-            const url = await uploadToImgBB(files.rc[0].buffer);
+        // RC Front
+        if (files?.rc_front?.[0]) {
+            const url = await uploadToImgBB(files.rc_front[0].buffer);
 
-            payload["rc.url"] = url;
+            payload["rc.front.url"] = url;
 
             if (body.rc_number) {
-                payload["rc.number"] = body.rc_number;
+                payload["rc.front.number"] = body.rc_number;
             }
         }
 
-        // DL
-        if (files?.dl?.[0]) {
-            const url = await uploadToImgBB(files.dl[0].buffer);
+        // RC Back
+        if (files?.rc_back?.[0]) {
+            const url = await uploadToImgBB(files.rc_back[0].buffer);
 
-            payload["dl.url"] = url;
+            payload["rc.back.url"] = url;
+        }
+
+        // DL Front
+        if (files?.dl_front?.[0]) {
+            const url = await uploadToImgBB(files.dl_front[0].buffer);
+
+            payload["dl.front.url"] = url;
 
             if (body.dl_number) {
-                payload["dl.number"] = body.dl_number;
+                payload["dl.front.number"] = body.dl_number;
             }
+        }
+
+        // DL Back
+        if (files?.dl_back?.[0]) {
+            const url = await uploadToImgBB(files.dl_back[0].buffer);
+
+            payload["dl.back.url"] = url;
         }
 
         // Insurance
@@ -108,6 +122,89 @@ export const updateDocumentStatusController = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+// 👉 Upload Dedicated Driving License (DL) Documents
+export const uploadDlDocument = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const files = req.files;
+        const { dl_number } = req.body;
+
+        if (!dl_number) {
+            return res.status(400).json({
+                success: false,
+                message: "Driving License number is required",
+            });
+        }
+
+        const payload = {};
+
+        // DL Front
+        if (files?.dl_front?.[0]) {
+            const url = await uploadToImgBB(files.dl_front[0].buffer);
+            payload["dl.front.url"] = url;
+            payload["dl.front.number"] = dl_number;
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "DL Front Side image is required",
+            });
+        }
+
+        // DL Back
+        if (files?.dl_back?.[0]) {
+            const url = await uploadToImgBB(files.dl_back[0].buffer);
+            payload["dl.back.url"] = url;
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "DL Back Side image is required",
+            });
+        }
+
+        // Save / Update using existing service
+        const doc = await createOrUpdateDriverDocument(user_id, payload);
+
+        return res.status(200).json({
+            success: true,
+            message: "Driving License uploaded successfully",
+            data: doc,
+        });
+    } catch (error) {
+        console.error("Error in uploadDlDocument:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+// 👉 Upload Profile Selfie / Avatar to ImgBB
+export const uploadAvatarController = async (req, res) => {
+    try {
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: "Profile photo (avatar) file is required",
+            });
+        }
+
+        const url = await uploadToImgBB(file.buffer);
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile photo uploaded successfully",
+            url,
+        });
+    } catch (error) {
+        return res.status(500).json({
             success: false,
             message: error.message,
         });

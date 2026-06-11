@@ -22,12 +22,6 @@ const driverSchema = new mongoose.Schema(
       required: true,
     },
 
-    rcNumber: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
     numberPlate: {
       type: String,
       required: true,

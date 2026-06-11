@@ -5,11 +5,12 @@ export const createRideReport = [
     .isMongoId()
     .withMessage("Ride ID must be a valid MongoDB ID"),
   body("reason")
-    .isIn(["wrong_fare", "driver_behavior", "vehicle_issue", "route_issue", "payment_issue", "other"])
-    .withMessage("Invalid reason"),
+    .optional()
+    .isString()
+    .withMessage("Reason must be a string"),
   body("description")
     .optional()
-    .isLength({ min: 10, max: 500 })
+    .isLength({ min: 1, max: 500 })
     .withMessage("Description must be between 10 and 500 characters"),
 ];
 
@@ -22,7 +23,7 @@ export const updateReportStatus = [
     .withMessage("Invalid status"),
   body("resolutionNotes")
     .optional()
-    .isLength({ min: 10, max: 500 })
+    .isLength({ min: 1, max: 500 })
     .withMessage("Resolution notes must be between 10 and 500 characters"),
 ];
 

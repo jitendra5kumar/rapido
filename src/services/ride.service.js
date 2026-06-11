@@ -214,7 +214,7 @@ export const getRides =
         select: "name phone driver_id",
         populate: {
           path: "driver_id",
-          select: "numberPlate rcNumber vehicleName",
+          select: "numberPlate vehicleName",
         },
       })
       .populate("driverId", "name phone")
@@ -245,7 +245,7 @@ export const getRideById =
         select: "name phone driver_id",
         populate: {
           path: "driver_id",
-          select: "numberPlate rcNumber vehicleName",
+          select: "numberPlate vehicleName",
         },
       })
       .populate("driverId", "name phone")
