@@ -64,6 +64,7 @@ export const rideAction = [
 export const arriveRide = [
   param('rideId').isMongoId().withMessage('Ride ID must be a valid MongoDB ID'),
   body('otp')
+    .optional()
     .isLength({ min: 4, max: 4 })
     .withMessage('OTP must be 4 digits')
     .isNumeric()
@@ -88,3 +89,8 @@ export const updateDropLocation = [
   body('distanceMeters').optional().isFloat({ min: 0 }).withMessage('distanceMeters must be a non-negative number'),
   body('durationMinutes').optional().isFloat({ min: 0 }).withMessage('durationMinutes must be a non-negative number'),
 ];
+
+export const getDriverRides = [
+  param('driverId').isMongoId().withMessage('Driver ID must be a valid MongoDB ID'),
+];
+

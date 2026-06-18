@@ -14,6 +14,7 @@ import {
   getDriversByVehicleRoute,
 } from '../services/vehicle.service.js';
 import Ride from "../models/ride.model.js";
+import Driver from "../models/driver.model.js";
 
 import { initChatSocket } from './chat.socket.js';
 import { initAdminChatSocket } from './adminChat.socket.js';
@@ -57,16 +58,29 @@ const setupSockets = (server) => {
    });
 
    socket.on("driver:online", async ({ driverId }) => {
-     await redis.sadd("drivers:online", driverId.toString());
+     const cleanDriverId = driverId.toString();
+     socket.driverId = cleanDriverId;
+     socket.userId = cleanDriverId;
+     socket.role = 'driver';
+     socket.join(cleanDriverId);
+
+     await redis.set(`socket:${cleanDriverId}`, socket.id, "EX", 86400);
+     await redis.sadd("drivers:online", cleanDriverId);
 
      await redis.set(
-       `driver:lastSeen:${driverId}`,
+       `driver:lastSeen:${cleanDriverId}`,
        Date.now(),
        "EX",
        DRIVER_HEARTBEAT_TTL,
      );
 
-     console.log(`Driver online: ${driverId}`);
+     try {
+       await Driver.findOneAndUpdate({ userId: cleanDriverId }, { isOnline: true });
+     } catch (err) {
+       console.error("Error updating DB driver online status:", err.message);
+     }
+
+     console.log(`Driver online: ${cleanDriverId}`);
    });
 
     // =====================================================
@@ -362,6 +376,12 @@ const setupSockets = (server) => {
             `driver:lastSeen:${socket.driverId}`
           );
 
+          try {
+            await Driver.findOneAndUpdate({ userId: socket.driverId }, { isOnline: false });
+          } catch (err) {
+            console.error("Error updating DB driver offline status:", err.message);
+          }
+
           console.log(
             `Driver offline: ${socket.driverId}`
           );
@@ -494,6 +514,12 @@ console.log(
             await redis.del(
               `driver:lastSeen:${socket.driverId}`
             );
+
+            try {
+              await Driver.findOneAndUpdate({ userId: socket.driverId }, { isOnline: false });
+            } catch (err) {
+              console.error("Error updating DB driver disconnect status:", err.message);
+            }
 
             console.log(
               `Driver auto offline: ${socket.driverId}`

@@ -21,6 +21,7 @@ export const completeProfile = [
     .isIn(['Male', 'Female', 'Other'])
     .withMessage('Gender must be male, female, or other'),
   body('referral_code').optional().isString().withMessage('Referral code must be a string'),
+  body('device').optional().isString().withMessage('Device must be a string'),
 ];
 
 export const login = [
@@ -31,7 +32,7 @@ export const login = [
 export const register = [
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
   body('name').isLength({ min: 1 }).withMessage('Name is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('device').optional().isString().withMessage('Device must be a string'),
 ];
 
 export const adminLogin = [

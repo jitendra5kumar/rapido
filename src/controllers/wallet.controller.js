@@ -1,3 +1,4 @@
+import { asyncHandler } from "../utils/index.js";
 import {
   createRechargeOrderService,
   verifyPaymentService,
@@ -7,7 +8,7 @@ import {
 // =============================
 // CREATE ORDER CONTROLLER
 // =============================
-export const createRechargeOrder = async (req, res) => {
+export const createRechargeOrder = asyncHandler(async (req, res) => {
   try {
     const user_id = req.user._id;
     const { amount } = req.body;
@@ -25,12 +26,12 @@ export const createRechargeOrder = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 // =============================
 // VERIFY PAYMENT CONTROLLER
 // =============================
-export const verifyRechargePayment = async (req, res) => {
+export const verifyRechargePayment = asyncHandler(async (req, res) => {
   try {
     const result = await verifyPaymentService(req.body);
 
@@ -45,12 +46,12 @@ export const verifyRechargePayment = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 // =============================
 // FAILED PAYMENT CONTROLLER
 // =============================
-export const markPaymentFailed = async (req, res) => {
+export const markPaymentFailed = asyncHandler(async (req, res) => {
   try {
     const { razorpay_order_id, reason } = req.body;
 
@@ -70,4 +71,4 @@ export const markPaymentFailed = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

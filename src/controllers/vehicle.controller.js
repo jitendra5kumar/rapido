@@ -1,3 +1,4 @@
+import { asyncHandler } from "../utils/index.js";
 import {
   createVehicle,
   updateVehicle,
@@ -11,7 +12,7 @@ import {
 /**
  * CREATE VEHICLE
  */
-export const createVehicleController = async (req, res) => {
+export const createVehicleController = asyncHandler(async (req, res) => {
   try {
     const vehicle = await createVehicle(req.body, req.files);
 
@@ -27,12 +28,12 @@ export const createVehicleController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 /**
  * GET ALL VEHICLES
  */
-export const getVehiclesController = async (req, res) => {
+export const getVehiclesController = asyncHandler(async (req, res) => {
   try {
     const vehicles = await getVehicles();
 
@@ -47,12 +48,12 @@ export const getVehiclesController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 /**
  * GET VEHICLES BY ROUTE
  */
-export const getVehiclesByRouteController = async (req, res) => {
+export const getVehiclesByRouteController = asyncHandler(async (req, res) => {
   try {
     
    
@@ -70,9 +71,9 @@ export const getVehiclesByRouteController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getDriversByVehicleRouteController = async (req, res) => {
+export const getDriversByVehicleRouteController = asyncHandler(async (req, res) => {
   try {
     const result = await getDriversByVehicleRoute(req.body);
 
@@ -87,12 +88,12 @@ export const getDriversByVehicleRouteController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 /**
  * GET VEHICLE BY ID
  */
-export const getVehicleByIdController = async (req, res) => {
+export const getVehicleByIdController = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -116,12 +117,12 @@ export const getVehicleByIdController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 /**
  * UPDATE VEHICLE
  */
-export const updateVehicleController = async (req, res) => {
+export const updateVehicleController = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -149,12 +150,12 @@ export const updateVehicleController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 /**
  * DELETE VEHICLE (SOFT DELETE)
  */
-export const deleteVehicleController = async (req, res) => {
+export const deleteVehicleController = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -179,4 +180,4 @@ export const deleteVehicleController = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

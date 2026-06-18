@@ -1,3 +1,4 @@
+import { asyncHandler } from "../utils/index.js";
 import {
     createServiceService,
     getAllServicesService,
@@ -7,7 +8,7 @@ import {
 } from "../services/service.service.js";
 
 // ➤ Create
-export const createService = async (req, res) => {
+export const createService = asyncHandler(async (req, res) => {
     try {
         console.log("BODY:", req.body);
         console.log("FILES:", req.files);
@@ -30,10 +31,10 @@ export const createService = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // ➤ Get All
-export const getAllServices = async (req, res) => {
+export const getAllServices = asyncHandler(async (req, res) => {
     try {
         const services = await getAllServicesService();
 
@@ -47,10 +48,10 @@ export const getAllServices = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // ➤ Get One
-export const getServiceById = async (req, res) => {
+export const getServiceById = asyncHandler(async (req, res) => {
     try {
         const service = await getServiceByIdService(req.params.id);
 
@@ -64,10 +65,10 @@ export const getServiceById = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // ➤ Update
-export const updateService = async (req, res) => {
+export const updateService = asyncHandler(async (req, res) => {
     try {
         console.log("BODY:", req.body);
         console.log("FILES:", req.files);
@@ -94,10 +95,10 @@ export const updateService = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // ➤ Delete
-export const deleteService = async (req, res) => {
+export const deleteService = asyncHandler(async (req, res) => {
     try {
         await deleteServiceService(req.params.id);
 
@@ -111,4 +112,4 @@ export const deleteService = async (req, res) => {
             message: error.message,
         });
     }
-};
+});

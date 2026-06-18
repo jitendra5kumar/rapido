@@ -15,5 +15,6 @@ router.post('/admin/login', rateLimitMiddleware, adminLoginValidator, handleVali
 router.post('/logout', authMiddleware, authController.logout);
 router.post("/save-fcm-token", authMiddleware, authController.saveFcmToken);
 router.post("/change-password", authMiddleware, changePasswordValidator, handleValidationErrors, authController.changePassword);
+router.delete("/delete-account", authMiddleware, authController.deleteAccount);
 
 export default router;

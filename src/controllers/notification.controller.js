@@ -1,8 +1,9 @@
 // controllers/notification.controller.js
 
 import { sendNotificationByRole } from "../services/notification.service.js";
+import { asyncHandler } from "../utils/index.js";
 
-export const sendRoleNotification = async (req, res) => {
+export const sendRoleNotification = asyncHandler(async (req, res) => {
   try {
     const { role, title, body } = req.body;
 
@@ -19,4 +20,4 @@ export const sendRoleNotification = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

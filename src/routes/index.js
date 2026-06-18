@@ -8,6 +8,8 @@ import alertRoutes from './alert.routes.js';
 import vehicleCustomRoutes from './vehicleCustom.routes.js';
 import vehicletype from './vehicle.routes.js';
 import driverRoutes from './driver.routes.js';
+import earningsRoutes from './earnings.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
 import serviceRoute from './service.routes.js';
 import driverdocRoutes from './driverDocument.route.js';
 import rideRoutes from './ride.routes.js';
@@ -55,6 +57,8 @@ router.use('/chat', chatRoutes)
 router.use('/admin-chat', adminChatRoutes)
 router.use('/support-chat', supportChatRoutes)
 router.use('/review', reviewRoutes)
+router.use('/earnings', earningsRoutes)
+router.use('/dashboard', dashboardRoutes)
 
 
 

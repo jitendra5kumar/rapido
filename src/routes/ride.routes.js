@@ -10,6 +10,7 @@ import {
   arriveRide,
   cancelRide,
   updateDropLocation,
+  getDriverRides,
 } from '../validators/ride.validator.js';
 import { handleValidationErrors } from '../middlewares/error.middleware.js';
 
@@ -27,6 +28,10 @@ router.post(
 
 router.get('/user/my', rideController.getMyRides);
 router.get('/user/recent', rideController.getRecentRides);
+router.get('/driver/my',  rideController.getMyDriverRides);
+router.get('/driver/active', rideController.getActiveDriverRide);
+router.get('/driver/:driverId/active', requireRoles('admin', 'sub_admin', 'driver'), getDriverRides, handleValidationErrors, rideController.getActiveDriverRideByDriverId);
+router.get('/driver/:driverId', requireRoles('admin', 'sub_admin', 'driver'), getDriverRides, handleValidationErrors, rideController.getDriverRides);
 router.get('/:rideId', getRide, handleValidationErrors, rideController.getRide);
 router.get('/', rideController.getAllRides);
 router.put('/:rideId', requireRoles('admin', 'sub_admin', 'driver', 'rider'), getRide, updateRide, handleValidationErrors, rideController.updateRide);

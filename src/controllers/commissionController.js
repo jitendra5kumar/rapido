@@ -1,3 +1,4 @@
+import { asyncHandler } from "../utils/index.js";
 import {
   setPlatformPercentService,
   setSubAdminCommissionService,
@@ -9,7 +10,7 @@ import {
 // =====================================
 
 export const setPlatformPercent =
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const { platform_percent } =
         req.body;
@@ -31,14 +32,14 @@ export const setPlatformPercent =
         message: error.message,
       });
     }
-  };
+  });
 
 // =====================================
 // SET SUB ADMIN COMMISSION
 // =====================================
 
 export const setSubAdminCommission =
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const adminId = req.user.id;
 
@@ -68,14 +69,14 @@ export const setSubAdminCommission =
         message: error.message,
       });
     }
-  };
+  });
 
 // =====================================
 // GET ALL COMMISSION
 // =====================================
 
 export const getSubAdminCommission =
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     try {
       const commissions =
         await getSubAdminCommissionService();
@@ -91,4 +92,4 @@ export const getSubAdminCommission =
         message: error.message,
       });
     }
-  };
+  });

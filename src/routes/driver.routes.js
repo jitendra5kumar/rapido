@@ -69,6 +69,12 @@ router.put(
   updateProfile
 );
 
+router.put(
+  "/updateProfile",
+  authMiddleware,
+  updateProfile
+);
+
 
 // ================= LOGOUT =================
 router.post(

@@ -1,8 +1,9 @@
 import { uploadToImgBB } from "../services/imgbb.service.js";
 import { createOrUpdateDriverDocument } from "../services/driverDocument.service.js";
+import { asyncHandler } from "../utils/index.js";
 
 // 👉 Upload Driver Documents
-export const uploadDriverDocuments = async (req, res) => {
+export const uploadDriverDocuments = asyncHandler(async (req, res) => {
     try {
         const user_id = req.user.id;
         const files = req.files;
@@ -75,6 +76,10 @@ export const uploadDriverDocuments = async (req, res) => {
             payload["dl.back.url"] = url;
         }
 
+        if (body.licenseType) {
+            payload["dl.licenseType"] = body.licenseType;
+        }
+
         // Insurance
         if (files?.insurance?.[0]) {
             const url = await uploadToImgBB(files.insurance[0].buffer);
@@ -99,10 +104,10 @@ export const uploadDriverDocuments = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 
-export const updateDocumentStatusController = async (req, res) => {
+export const updateDocumentStatusController = asyncHandler(async (req, res) => {
     try {
         const { id } = req.params;
         const updates = req.body;
@@ -126,14 +131,14 @@ export const updateDocumentStatusController = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // 👉 Upload Dedicated Driving License (DL) Documents
-export const uploadDlDocument = async (req, res) => {
+export const uploadDlDocument = asyncHandler(async (req, res) => {
     try {
         const user_id = req.user.id;
         const files = req.files;
-        const { dl_number } = req.body;
+        const { dl_number, licenseType } = req.body;
 
         if (!dl_number) {
             return res.status(400).json({
@@ -142,7 +147,15 @@ export const uploadDlDocument = async (req, res) => {
             });
         }
 
+        if (!licenseType) {
+            return res.status(400).json({
+                success: false,
+                message: "License Type is required",
+            });
+        }
+
         const payload = {};
+        payload["dl.licenseType"] = licenseType;
 
         // DL Front
         if (files?.dl_front?.[0]) {
@@ -182,10 +195,10 @@ export const uploadDlDocument = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
 
 // 👉 Upload Profile Selfie / Avatar to ImgBB
-export const uploadAvatarController = async (req, res) => {
+export const uploadAvatarController = asyncHandler(async (req, res) => {
     try {
         const file = req.file;
 
@@ -209,4 +222,37 @@ export const uploadAvatarController = async (req, res) => {
             message: error.message,
         });
     }
-};
+});
+
+// 👉 Update DL Info (license number & license type only — no image re-upload)
+export const updateDlInfoController = asyncHandler(async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const { dl_number, licenseType } = req.body;
+
+        if (!dl_number && !licenseType) {
+            return res.status(400).json({
+                success: false,
+                message: "Provide at least dl_number or licenseType to update",
+            });
+        }
+
+        const payload = {};
+        if (dl_number)    payload["dl.front.number"] = dl_number;
+        if (licenseType)  payload["dl.licenseType"] = licenseType;
+
+        const doc = await createOrUpdateDriverDocument(user_id, payload);
+
+        return res.status(200).json({
+            success: true,
+            message: "Driving License info updated successfully",
+            data: doc,
+        });
+    } catch (error) {
+        console.error("Error in updateDlInfoController:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+});

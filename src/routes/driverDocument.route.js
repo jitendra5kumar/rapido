@@ -6,6 +6,7 @@ import {
   uploadDriverDocuments,
   uploadDlDocument,
   uploadAvatarController,
+  updateDlInfoController,
 } from "../controllers/driverDocument.controller.js";
 
 import authMiddleware, { requireRoles } from "../middlewares/auth.middleware.js";
@@ -65,7 +66,7 @@ router.post(
 // 📤 Upload Profile Selfie / Avatar
 router.post(
   "/upload-avatar",
-  authMiddleware,
+  // authMiddleware,
   upload.single("avatar"),
   uploadAvatarController
 );
@@ -77,6 +78,13 @@ router.patch(
   rateLimitMiddleware,
   requireRoles('admin', 'sub_admin'),
   updateDocumentStatusController
+);
+
+// ✏️ Update DL Info (license number / license type) — no image re-upload
+router.put(
+  "/update-dl-info",
+  authMiddleware,
+  updateDlInfoController
 );
 
 export default router;

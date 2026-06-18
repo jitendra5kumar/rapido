@@ -79,6 +79,9 @@ const driverDocumentSchema = new mongoose.Schema(
                     default: "pending",
                 },
             },
+            licenseType: {
+                type: String,
+            },
         },
 
         insurance: {

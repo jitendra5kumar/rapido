@@ -1,3 +1,4 @@
+import { asyncHandler } from "../utils/index.js";
 import {
   saveConfigService,
   getConfigService,
@@ -6,7 +7,7 @@ import {
 
 
 // CREATE OR UPDATE FULL CONFIG
-export const saveConfig = async (req, res) => {
+export const saveConfig = asyncHandler(async (req, res) => {
   try {
     const config = await saveConfigService(req.body);
 
@@ -23,11 +24,11 @@ export const saveConfig = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 
 // GET CONFIG
-export const getConfig = async (req, res) => {
+export const getConfig = asyncHandler(async (req, res) => {
   try {
     const config = await getConfigService();
 
@@ -43,11 +44,11 @@ export const getConfig = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
 
 // UPDATE SINGLE FIELD
-export const updateSingleField = async (req, res) => {
+export const updateSingleField = asyncHandler(async (req, res) => {
   try {
     const { field, value } = req.body;
 
@@ -73,4 +74,4 @@ export const updateSingleField = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

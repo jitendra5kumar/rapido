@@ -26,30 +26,30 @@ export const sendOtp = async (phone, driver, channel = 'sms') => {
 
   // keep minimal provider metadata (sessionId when available)
   let sessionId = null;
-  try {
-    if (process.env.TWOFA_API_KEY) {
-      let formattedPhone = phone.trim();
-      if (!formattedPhone.startsWith('+')) {
-        formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
-      }
-      if (channel === 'whatsapp') {
-        // Simulating WhatsApp OTP send (e.g. 2factor whatsapp addon / mock logs)
-        console.log(`[WhatsApp API] Sending OTP ${otp} to ${formattedPhone} via WhatsApp`);
-      } else {
-        const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
-        const template = process.env.TWOFA_TEMPLATE || 'OTP1';
-        const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;
-        const response = await axios.get(url);
-        console.log('2factor response:', response.data);
-        if (response.data?.Status === 'Success') {
-          sessionId = response.data.Details;
-        }
-      }
-    }
-  } catch (err) {
-    // ignore remote send errors — OTP is still stored locally for verification
-    console.error('2factor send warning:', err.message);
-  }
+  // try {
+  //   if (process.env.TWOFA_API_KEY) {
+  //     let formattedPhone = phone.trim();
+  //     if (!formattedPhone.startsWith('+')) {
+  //       formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
+  //     }
+  //     if (channel === 'whatsapp') {
+  //       // Simulating WhatsApp OTP send (e.g. 2factor whatsapp addon / mock logs)
+  //       console.log(`[WhatsApp API] Sending OTP ${otp} to ${formattedPhone} via WhatsApp`);
+  //     } else {
+  //       const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
+  //       const template = process.env.TWOFA_TEMPLATE || 'OTP1';
+  //       const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;
+  //       const response = await axios.get(url);
+  //       console.log('2factor response:', response.data);
+  //       if (response.data?.Status === 'Success') {
+  //         sessionId = response.data.Details;
+  //       }
+  //     }
+  //   }
+  // } catch (err) {
+  //   // ignore remote send errors — OTP is still stored locally for verification
+  //   console.error('2factor send warning:', err.message);
+  // }
 
   await otpCache.setData(phone, {
     phone,
@@ -82,7 +82,11 @@ export const verifyOtp = async (phone, otp) => {
 
   const user = await User.findOne({ phone });
   const isVerified = user ? Boolean(user.is_verified) : false;
+
+
   const result = { phone, otpVerified: true, is_verified: isVerified };
+ let isSignup = false;
+
 
   if (user) {
     const token = jwt.generateToken({
@@ -95,8 +99,12 @@ export const verifyOtp = async (phone, otp) => {
     result.token = token;
 
     const driverDoc = await DriverDocument.findOne({ user_id: user._id });
-    const dlUploaded = Boolean(driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url);
-    const profileSetupComplete = Boolean(user.name && user.gender && user.profile_image_id);
+    const dlUploaded = Boolean(
+      driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url,
+    );
+    const profileSetupComplete = Boolean(
+      user.name && user.gender && user.profile_image_id,
+    );
 
     const vehicleUploaded = Boolean(user.driver_id);
 
@@ -120,8 +128,11 @@ export const verifyOtp = async (phone, otp) => {
         isVerified,
       },
     };
+  } else {
+    isSignup = true;
   }
 
+  result.isSignup = isSignup;
   return result;
 };
 
@@ -129,7 +140,8 @@ export const completeProfile = async (
   phone,
   name,
   gender,
-  referralCode = null
+  referralCode = null,
+  device = null
 ) => {
   const isVerified = await otpCache.isOtpVerified(phone);
   // if (!isVerified) {
@@ -145,6 +157,7 @@ export const completeProfile = async (
   if (user) {
     if (!user.name && name) update.name = name;
     if (!user.gender && gender) update.gender = gender;
+    if (device) update.device = device;
 
     if (referralCode) {
       const referrer = await User.findOne({ referral_code: referralCode.trim() });
@@ -200,6 +213,7 @@ export const completeProfile = async (
       referred_by_id: referredById,
       is_verified: true,
       pin,
+      device,
     }).save();
   }
 

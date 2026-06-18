@@ -753,3 +753,57 @@ export const updateDropLocation =
 
     return response.success(res, 'Drop location updated', updatedRide);
   });
+
+export const getDriverRides =
+  asyncHandler(async (req, res) => {
+    const rides =
+      await rideService.getRides({
+        driverId: req.params.driverId,
+        status: req.query.status,
+        limit: req.query.limit,
+      });
+
+    return response.success(
+      res,
+      'Driver rides fetched successfully',
+      rides
+    );
+  });
+
+export const getMyDriverRides =
+  asyncHandler(async (req, res) => {
+    const rides =
+      await rideService.getRides({
+        driverId: req.user.id,
+        status: req.query.status,
+        limit: req.query.limit,
+      });
+
+    return response.success(
+      res,
+      'Your driver rides fetched successfully',
+      rides
+    );
+  });
+
+export const getActiveDriverRide =
+  asyncHandler(async (req, res) => {
+    const ride = await rideService.getActiveDriverRide(req.user.id);
+    return response.success(
+      res,
+      'Active ride fetched successfully',
+      ride
+    );
+  });
+
+export const getActiveDriverRideByDriverId =
+  asyncHandler(async (req, res) => {
+    const ride = await rideService.getActiveDriverRide(req.params.driverId);
+    return response.success(
+      res,
+      'Driver active ride fetched successfully',
+      ride
+    );
+  });
+
+

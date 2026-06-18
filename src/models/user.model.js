@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Sequence from "./sequence.model.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -98,6 +99,10 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Driver",
     },
+    city:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "City",
+    },
     
     fcm_token: {
       type: String,
@@ -133,6 +138,28 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    rating: {
+      type: Number,
+      default: 5,
+    },
+    average_rating: {
+      type: Number,
+      default: 5,
+    },
+    total_reviews: {
+      type: Number,
+      default: 0,
+    },
+    partnerId: {
+      type: Number,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+    device: {
+      type: String,
+      default: null,
+    },
 
   },
   {
@@ -142,5 +169,23 @@ const userSchema = new mongoose.Schema(
 
 // 🔥 Geo index for location search
 userSchema.index({ location: "2dsphere" });
+
+// Auto-increment `partnerId` on new User documents using the Sequence collection
+userSchema.pre("save", async function (next) {
+  try {
+    if (this.isNew && (this.partnerId === undefined || this.partnerId === null)) {
+      const seq = await Sequence.findOneAndUpdate(
+        { name: "partnerId" },
+        { $inc: { value: 1 } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      this.partnerId = seq.value;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default mongoose.model("User", userSchema);

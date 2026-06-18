@@ -1,7 +1,8 @@
 import * as chatService from "../services/chat.service.js";
 import Chat from "../models/chat.model.js";
+import { asyncHandler } from "../utils/index.js";
 
-export const startChat = async (req, res) => {
+export const startChat = asyncHandler(async (req, res) => {
   try {
     const { driverId, userId } = req.body;
 
@@ -25,9 +26,9 @@ export const startChat = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getChatHistory = async (req, res) => {
+export const getChatHistory = asyncHandler(async (req, res) => {
   try {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -49,9 +50,9 @@ export const getChatHistory = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getUserChats = async (req, res) => {
+export const getUserChats = asyncHandler(async (req, res) => {
   try {
     const { userId } = req.params;
     const { role } = req.query;
@@ -76,9 +77,9 @@ export const getUserChats = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const markAsRead = async (req, res) => {
+export const markAsRead = asyncHandler(async (req, res) => {
   try {
     const { chatId } = req.params;
     const { userId } = req.body;
@@ -103,9 +104,9 @@ export const markAsRead = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const closeChat = async (req, res) => {
+export const closeChat = asyncHandler(async (req, res) => {
   try {
     const { chatId } = req.params;
 
@@ -122,9 +123,9 @@ export const closeChat = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getUnreadCount = async (req, res) => {
+export const getUnreadCount = asyncHandler(async (req, res) => {
   try {
     const { userId, role } = req.params;
 
@@ -145,4 +146,4 @@ export const getUnreadCount = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

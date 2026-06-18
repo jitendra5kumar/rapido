@@ -1,8 +1,10 @@
 import { uploadToImgBB } from "../services/imgbb.service.js";
-import { createOrUpdateVehicle, updateVehicleStatus } from "../services/driverVehicle.service.js";
+import { createOrUpdateVehicle, updateVehicleStatus, getDriverVehicleByUserId } from "../services/driverVehicle.service.js";
 import User from "../models/user.model.js";
+import { asyncHandler, response } from "../utils/index.js";
 
-export const uploadDriverVehicle = async (req, res) => {
+// UPLOAD DRIVER VEHICLE
+export const uploadDriverVehicleController = asyncHandler(async (req, res) => {
   try {
     const user_id = req.user.id; // auth middleware required
 
@@ -21,10 +23,7 @@ export const uploadDriverVehicle = async (req, res) => {
     // 🚀 Upload vehicle images (max 6)
     if (files?.vehicleImages) {
       if (files.vehicleImages.length > 6) {
-        return res.status(400).json({
-          success: false,
-          message: "Max 6 images allowed",
-        });
+        return response.error(res, "Max 6 images allowed", 400);
       }
 
       const imageUrls = [];
@@ -37,13 +36,10 @@ export const uploadDriverVehicle = async (req, res) => {
       payload.vehicleImages = imageUrls;
     }
 
-
     const vehicle = await createOrUpdateVehicle(
       user_id,
       payload
     );
-
-    // Driver document nikalo
 
     if (vehicle) {
       await User.findByIdAndUpdate(
@@ -54,37 +50,21 @@ export const uploadDriverVehicle = async (req, res) => {
       );
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Vehicle uploaded successfully",
-      data: vehicle,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Vehicle uploaded successfully",
-      data: vehicle,
-    });
+    return response.success(res, "Vehicle uploaded successfully", vehicle, 200);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return response.error(res, error.message, 500);
   }
-};
+});
 
-
-export const approveRejectVehicle = async (req, res) => {
+// APPROVE / REJECT DRIVER VEHICLE (Admin/Sub-Admin)
+export const approveRejectVehicleController = asyncHandler(async (req, res) => {
   try {
     const { vehicle_id, status } = req.body;
 
     const admin_id = req.user.id; // auth middleware (admin)
 
     if (!["approved", "rejected"].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status",
-      });
+      return response.error(res, "Invalid status", 400);
     }
 
     const vehicle = await updateVehicleStatus(
@@ -93,15 +73,24 @@ export const approveRejectVehicle = async (req, res) => {
       status
     );
 
-    return res.status(200).json({
-      success: true,
-      message: `Vehicle ${status} successfully`,
-      data: vehicle,
-    });
+    return response.success(res, `Vehicle ${status} successfully`, vehicle, 200);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return response.error(res, error.message, 500);
   }
-};
+});
+
+// GET DRIVER VEHICLE
+export const getDriverVehicleController = asyncHandler(async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const vehicle = await getDriverVehicleByUserId(user_id);
+
+    if (!vehicle) {
+      return response.error(res, "No vehicle found for this driver", 404);
+    }
+
+    return response.success(res, "Vehicle details fetched successfully", vehicle, 200);
+  } catch (error) {
+    return response.error(res, error.message, 500);
+  }
+});

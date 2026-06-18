@@ -26,6 +26,7 @@ const authMiddleware = async (req, res, next) => {
 
 export const requireRoles = (...allowedRoles) => (req, res, next) => {
   const role = req.user?.role;
+  console.log("sss", role, allowedRoles);
   if (!role || !allowedRoles.includes(role)) {
     return res.status(403).json({ message: 'Access denied. Invalid permissions.' });
   }

@@ -1,6 +1,7 @@
 import * as supportChatService from "../services/supportChat.service.js";
+import { asyncHandler } from "../utils/index.js";
 
-export const startSupportChat = async (req, res) => {
+export const startSupportChat = asyncHandler(async (req, res) => {
   try {
     const { adminId, userId } = req.body;
 
@@ -24,9 +25,9 @@ export const startSupportChat = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const saveSupportMessage = async (req, res) => {
+export const saveSupportMessage = asyncHandler(async (req, res) => {
   try {
     const { chatId } = req.params;
     const { message } = req.body;
@@ -65,9 +66,9 @@ export const saveSupportMessage = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getSupportChatHistory = async (req, res) => {
+export const getSupportChatHistory = asyncHandler(async (req, res) => {
   try {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -89,9 +90,9 @@ export const getSupportChatHistory = async (req, res) => {
       message: error.message,
     });
   }
-};
+});
 
-export const getSupportChats = async (req, res) => {
+export const getSupportChats = asyncHandler(async (req, res) => {
   try {
     const { role } = req.query;
     const userId = req.user?._id;
@@ -116,4 +117,4 @@ export const getSupportChats = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

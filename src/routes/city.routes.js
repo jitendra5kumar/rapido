@@ -7,13 +7,13 @@ import { handleValidationErrors } from '../middlewares/error.middleware.js';
 const router = express.Router();
 
 // All city routes require authentication
-router.use(authMiddleware);
+
 
 // POST /api/city - Create a new city
-router.post('/',requireRoles('admin', 'sub_admin'), createCityValidator, handleValidationErrors, cityController.createCity);
+router.post('/',requireRoles('admin', 'sub_admin'),authMiddleware, createCityValidator, handleValidationErrors, cityController.createCity);
 
 // PUT /api/city/:cityId - Update city
-router.put('/:cityId',requireRoles('admin', 'sub_admin'), updateCityValidator, handleValidationErrors, cityController.updateCity);
+router.put('/:cityId',requireRoles('admin', 'sub_admin'),authMiddleware, updateCityValidator, handleValidationErrors, cityController.updateCity);
 
 // GET /api/city/:cityId - Get city by ID
 router.get('/:cityId', getCityValidator, handleValidationErrors, cityController.getCity);
@@ -22,9 +22,9 @@ router.get('/:cityId', getCityValidator, handleValidationErrors, cityController.
 router.get('/', cityController.getAllCities);
 
 // GET /api/city/user/my - Get cities created by current user
-router.get('/user/my', cityController.getUserCities);
+router.get('/user/my',authMiddleware, cityController.getUserCities);
 
 // DELETE /api/city/:cityId - Delete city
-router.delete('/:cityId',requireRoles('admin', 'sub_admin'), deleteCityValidator, handleValidationErrors, cityController.deleteCity);
+router.delete('/:cityId',requireRoles('admin', 'sub_admin'),authMiddleware, deleteCityValidator, handleValidationErrors, cityController.deleteCity);
 
 export default router;

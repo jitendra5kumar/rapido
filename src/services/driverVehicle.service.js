@@ -36,3 +36,10 @@ export const updateVehicleStatus = async (vehicle_id, admin_id, status) => {
 
   return vehicle;
 };
+
+export const getDriverVehicleByUserId = async (user_id) => {
+  return await Driver.findOne({ userId: user_id })
+    .populate("serviceId")
+    .populate("vehicleTypeId")
+    .lean();
+};

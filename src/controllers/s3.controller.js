@@ -1,8 +1,9 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/s3.js";
+import { asyncHandler } from "../utils/index.js";
 
-export const generateUploadUrl = async (req, res) => {
+export const generateUploadUrl = asyncHandler(async (req, res) => {
   try {
     const { fileName, fileType } = req.body;
 
@@ -31,4 +32,4 @@ export const generateUploadUrl = async (req, res) => {
       message: error.message,
     });
   }
-};
+});

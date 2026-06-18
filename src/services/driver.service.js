@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { jwt } from "../utils/index.js";
 import otpCache from "../cache/otp.cache.js";
 import sessionCache from "../cache/session.cache.js";
-
+import City from "../models/city.model.js";
 // 🎯 referral code generator
 const generateReferralCode = () => {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
@@ -19,7 +19,8 @@ export const sendOtp = async (
     name,
     password,
     email = null,
-    referral_code = null
+    referral_code = null,
+    device = null
 ) => {
 
     if (!phone) {
@@ -74,6 +75,7 @@ export const sendOtp = async (
             password,
             email,
             referred_by_id: subAdmin._id,
+            device,
         },
         300
     );
@@ -148,6 +150,7 @@ export const verifyOtp = async (phone, otp) => {
             referral_code, // driver's own code
 
             referred_by_id: userData.referred_by_id, // linked sub admin
+            device: userData.device || null,
         });
     }
 
@@ -184,9 +187,11 @@ export const createDriverService = async (payload) => {
     const {
         name,
         phone,
-        password,
         email,
-        referral_code,
+        city,
+        dob,
+        gender,
+        device,
     } = payload;
 
     // ✅ check existing
@@ -198,7 +203,6 @@ export const createDriverService = async (payload) => {
     });
 
     if (existing) {
-
         if (existing.phone === phone) {
             throw new Error("Phone already exists");
         }
@@ -208,12 +212,22 @@ export const createDriverService = async (payload) => {
         }
     }
 
-    // ✅ validate sub admin code
-    if (!referral_code) {
-        throw new Error("Sub admin referral code is required");
-    }
+ const cityData = await City.findById(city)
+   .populate("createdBy", "referral_code name phone")
+   .lean();
 
-    const subAdmin = await User.findOne({
+    if (!cityData) {
+        throw new Error("Invalid city");
+    }
+    console.log("cityData",cityData);
+
+    let referral_code = cityData?.createdBy.referral_code||null;
+
+
+let subAdmin = null;
+  if (referral_code) {
+
+       subAdmin = await User.findOne({
         referral_code,
         role: "sub_admin",
     });
@@ -221,18 +235,14 @@ export const createDriverService = async (payload) => {
     if (!subAdmin) {
         throw new Error("Invalid sub admin referral code");
     }
-
-    // ✅ hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+}
 
     // ✅ generate unique driver referral code
     let driverReferralCode;
     let isUnique = false;
 
     while (!isUnique) {
-
         driverReferralCode = generateReferralCode();
-
         const exists = await User.findOne({
             referral_code: driverReferralCode,
         });
@@ -246,17 +256,27 @@ export const createDriverService = async (payload) => {
     const driver = await User.create({
         name,
         phone,
-        email,
-        password: hashedPassword,
-
+        // email,
         role: "driver",
-
         referral_code: driverReferralCode,
-
-        referred_by_id: subAdmin._id,
+        referred_by_id: subAdmin?._id||null,
+        city,
+        dob,
+        gender,
+        device,
     });
+  const result = { phone, otpVerified: true, is_verified: false };
 
-    return driver;
+     const token = jwt.generateToken({
+       id: driver._id,
+       phone: driver.phone,
+       role: driver.role,
+     });
+    
+        await sessionCache.setSession(driver._id.toString(), token);
+        result.token = token;
+
+    return result;
 };
 
 // ==============================
@@ -348,25 +368,17 @@ export const getProfileService = async (userId) => {
 // ==============================
 // UPDATE PROFILE
 // ==============================
-export const updateProfileService = async (
-    userId,
-    updates
-) => {
+export const updateProfileService = async (userId, updates) => {
+  let user = await User.findById(userId);
 
-    console.log(userId,updates)
-
-    delete updates.password;
-    delete updates.role;
-
-    const user = await User.findByIdAndUpdate(
-        userId,
-        updates,
-        {
-            new: true,
-        }
-    );
-
+  if (user) {
+    Object.assign(user, updates);
+    await user.save();
     return user;
+  }
+
+  user = await User.create(updates);
+  return user;
 };
 
 // ==============================
