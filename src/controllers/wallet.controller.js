@@ -1,74 +1,42 @@
-import { asyncHandler } from "../utils/index.js";
-import {
-  createRechargeOrderService,
-  verifyPaymentService,
-  markFailedService,
-} from "../services/wallet.service.js";
+import * as walletService from "../services/wallet.service.js";
+import { asyncHandler, response } from "../utils/index.js";
 
 // =============================
-// CREATE ORDER CONTROLLER
+// CREATE RECHARGE ORDER
 // =============================
-export const createRechargeOrder = asyncHandler(async (req, res) => {
-  try {
-    const user_id = req.user._id;
-    const { amount } = req.body;
+export const createRechargeOrderController = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const { amount } = req.body;
 
-    const result = await createRechargeOrderService(user_id, amount);
-
-    return res.status(200).json({
-      success: true,
-      message: "Order created successfully",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+  if (!amount || isNaN(amount) || Number(amount) <= 0) {
+    return response.error(res, "Invalid amount", 400);
   }
+
+  const result = await walletService.createRechargeOrder(userId, amount);
+
+  response.success(res, "Order created successfully", result, 201);
 });
 
 // =============================
-// VERIFY PAYMENT CONTROLLER
+// VERIFY RECHARGE PAYMENT
 // =============================
-export const verifyRechargePayment = asyncHandler(async (req, res) => {
-  try {
-    const result = await verifyPaymentService(req.body);
+export const verifyRechargePaymentController = asyncHandler(async (req, res) => {
+  const result = await walletService.verifyRechargePayment(req.body);
 
-    return res.status(200).json({
-      success: true,
-      message: "Payment verified & wallet updated",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: error.message,
-    });
-  }
+  response.success(res, "Payment verified & wallet updated", result);
 });
 
 // =============================
-// FAILED PAYMENT CONTROLLER
+// FAILED PAYMENT
 // =============================
-export const markPaymentFailed = asyncHandler(async (req, res) => {
-  try {
-    const { razorpay_order_id, reason } = req.body;
+export const markPaymentFailedController = asyncHandler(async (req, res) => {
+  const { razorpay_order_id, reason } = req.body;
 
-    const result = await markFailedService(
-      razorpay_order_id,
-      reason
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Payment marked failed",
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+  if (!razorpay_order_id) {
+    return response.error(res, "razorpay_order_id is required", 400);
   }
+
+  const result = await walletService.markPaymentFailed(razorpay_order_id, reason);
+
+  response.success(res, "Payment marked failed", result);
 });

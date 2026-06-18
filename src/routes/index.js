@@ -26,6 +26,7 @@ import chatRoutes from './chat.routes.js';
 import adminChatRoutes from './adminChat.routes.js';
 import supportChatRoutes from './supportChat.routes.js';
 import reviewRoutes from './review.routes.js';
+import payoutMethodRoutes from './payoutMethod.route.js';
 
 
 
@@ -59,6 +60,7 @@ router.use('/support-chat', supportChatRoutes)
 router.use('/review', reviewRoutes)
 router.use('/earnings', earningsRoutes)
 router.use('/dashboard', dashboardRoutes)
+router.use('/payout-method', payoutMethodRoutes)
 
 
 
