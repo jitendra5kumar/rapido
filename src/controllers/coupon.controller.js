@@ -27,6 +27,8 @@ export const getCouponByIdController = asyncHandler(async (req, res) => {
 
 // UPDATE COUPON CODE
 export const updateCouponController = asyncHandler(async (req, res) => {
+
+  console.log(req.body)
   const { id } = req.params;
   const userId = req.user.id;
   const coupon = await couponService.updateCoupon(id, req.body, userId);

@@ -1,35 +1,21 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/s3.js";
-import { asyncHandler } from "../utils/index.js";
 
-export const generateUploadUrl = asyncHandler(async (req, res) => {
-  try {
-    const { fileName, fileType } = req.body;
+export const uploadToS3 = async (
+  buffer,
+  fileName,
+  mimeType
+) => {
+  const key = `driver-documents/${Date.now()}-${fileName}`;
 
-    const key = `uploads/${Date.now()}-${fileName}`;
-
-    const command = new PutObjectCommand({
+  await s3.send(
+    new PutObjectCommand({
       Bucket: process.env.AWS_BUCKET_NAME,
       Key: key,
-      ContentType: fileType,
-    });
+      Body: buffer,
+      ContentType: mimeType,
+    })
+  );
 
-    const uploadUrl = await getSignedUrl(s3, command, {
-      expiresIn: 60,
-    });
-
-    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
-
-    res.json({
-      success: true,
-      uploadUrl,
-      imageUrl,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+  return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+};

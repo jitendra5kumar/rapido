@@ -3,14 +3,14 @@ import express from "express";
 import {
   createReview,
   getDriverReviews,
-  getRiderReviews,
+  getallreviews
 } from "../controllers/review.controller.js";
 
 import authMiddleware from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// rider give review or driver give review
+// rider give review
 router.post(
   "/",
   authMiddleware,
@@ -23,10 +23,10 @@ router.get(
   getDriverReviews
 );
 
-// get all reviews of rider
+// get all reviews
 router.get(
-  "/rider/:riderId",
-  getRiderReviews
+  "/",
+  getallreviews
 );
 
 export default router;

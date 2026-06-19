@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const citySchema = new mongoose.Schema(
   {
@@ -6,23 +6,23 @@ const citySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      unique: true, // duplicate city avoid karega
+      unique: true,
     },
 
     image: {
-      type: String, 
+      type: String,
       required: true,
     },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User', // jis user ne city create ki
+      ref: "User",
       required: true,
     },
   },
   {
-    timestamps: true, // createdAt & updatedAt auto
+    timestamps: true,
   }
 );
 
-export default mongoose.model('City', citySchema);
+export default mongoose.model("City", citySchema);

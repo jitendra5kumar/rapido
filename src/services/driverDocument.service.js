@@ -1,4 +1,4 @@
-import  DriverDocument  from "../models/driverDocument.model.js";
+import { DriverDocument } from "../models/driverDocument.model.js";
 
 export const createOrUpdateDriverDocument = async (user_id, payload) => {
   const doc = await DriverDocument.findOneAndUpdate(
@@ -26,28 +26,31 @@ export const updateDocumentStatusService = async (
     throw new Error("Document not found");
   }
 
-  // 🔁 Dynamic update (aadhaar.front.status, pan.status etc.)
+  // 🔥 SAFE UPDATE HANDLING
   Object.keys(updates).forEach((key) => {
     const keys = key.split(".");
 
     if (keys.length === 2) {
-      // e.g. aadhaar.front
-      doc[keys[0]][keys[1]].status = updates[key];
+      const [main, sub] = keys;
+
+      if (doc[main] && doc[main][sub]) {
+        doc[main][sub].status = updates[key];
+      }
+
     } else if (keys.length === 1) {
-      // e.g. pan
-      doc[key].status = updates[key];
+      if (doc[key]) {
+        doc[key].status = updates[key];
+      }
     }
   });
 
-  // 🔁 Auto overall status logic
+  // 🔁 FIXED STATUS LOGIC
   const allStatuses = [
     doc.aadhaar?.front?.status,
     doc.aadhaar?.back?.status,
     doc.pan?.status,
-    doc.rc?.front?.status,
-    doc.rc?.back?.status,
-    doc.dl?.front?.status,
-    doc.dl?.back?.status,
+    doc.rc?.status,
+    doc.dl?.status,
     doc.insurance?.status,
   ];
 
@@ -64,4 +67,20 @@ export const updateDocumentStatusService = async (
   await doc.save();
 
   return doc;
+};
+
+export const getallDriverDocuments = async (filter, options) => {
+  const docs = await DriverDocument.paginate(filter, {
+    ...options,
+    populate: [
+      {
+        path: "user_id",
+        select: "name email phone profileImage",
+      },
+    ],
+  });
+
+
+
+  return docs;
 };

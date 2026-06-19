@@ -2,17 +2,16 @@ import Review from "../models/review.model.js";
 import User from "../models/user.model.js";
 
 export const createReviewService = async (data) => {
-  const { riderId, driverId, rating, review, targetType } = data;
+  const { riderId, driverId, rating, review } = data;
 
   // check already reviewed
   const existingReview = await Review.findOne({
     riderId,
     driverId,
-    targetType,
   });
 
   if (existingReview) {
-    throw new Error(`You already rated this ${targetType}`);
+    throw new Error("You already reviewed this driver");
   }
 
   const newReview = await Review.create({
@@ -20,22 +19,18 @@ export const createReviewService = async (data) => {
     driverId,
     rating,
     review,
-    targetType,
   });
 
-  // ⭐ Update average rating of the target user
-  const targetUserId = targetType === "driver" ? driverId : riderId;
-
+  // ⭐ Update driver average rating
   const stats = await Review.aggregate([
     {
       $match: {
-        ...(targetType === "driver" ? { driverId: newReview.driverId } : { riderId: newReview.riderId }),
-        targetType,
+        driverId: newReview.driverId,
       },
     },
     {
       $group: {
-        _id: targetType === "driver" ? "$driverId" : "$riderId",
+        _id: "$driverId",
         averageRating: {
           $avg: "$rating",
         },
@@ -47,10 +42,10 @@ export const createReviewService = async (data) => {
   ]);
 
   if (stats.length > 0) {
-    const avgRating = Number(stats[0].averageRating.toFixed(1));
-    await User.findByIdAndUpdate(targetUserId, {
-      rating: avgRating,
-      average_rating: avgRating,
+    await User.findByIdAndUpdate(driverId, {
+      average_rating: Number(
+        stats[0].averageRating.toFixed(1)
+      ),
       total_reviews: stats[0].totalReviews,
     });
   }
@@ -58,14 +53,17 @@ export const createReviewService = async (data) => {
   return newReview;
 };
 
-export const getDriverReviewsService = async (driverId) => {
-  return await Review.find({ driverId, targetType: "driver" })
+export const getDriverReviewsService = async (
+  driverId
+) => {
+  return await Review.find({ driverId })
     .populate("riderId", "name profile_image_id")
     .sort({ createdAt: -1 });
 };
 
-export const getRiderReviewsService = async (riderId) => {
-  return await Review.find({ riderId, targetType: "rider" })
-    .populate("driverId", "name profile_image_id")
-    .sort({ createdAt: -1 });
-};
+export const getallreviewsService=async()=>{
+  return await Review.find({})
+  .populate("riderId", "name profile_image_id")
+  .populate("driverId", "name profile_image_id")
+  .sort({ createdAt: -1 });
+}

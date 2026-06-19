@@ -13,12 +13,6 @@ export const getProfile = async (userId) => {
     email: user.email,
     phone: user.phone,
     role: user.role,
-    pin: user.pin,
-    referral_code: user.referral_code,
-    wallet: user.wallet,
-    profile_image_id: user.profile_image_id,
-    referralEarnings: user.referralEarnings,
-    totalReferrals: user.totalReferrals,
     createdAt: user.createdAt,
   };
 };
@@ -102,5 +96,18 @@ export const changeUserRole = async (targetUserId, newRole, performedById, perfo
     role: user.role,
     updatedAt: user.updatedAt,
   };
+};
+
+
+export const getAllUsers = async () => {
+  const users = await User.find().lean();
+  return users.map(user => ({
+    id: user._id,
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+  }));
 };
 

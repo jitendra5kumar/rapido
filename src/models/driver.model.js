@@ -22,13 +22,13 @@ const driverSchema = new mongoose.Schema(
       required: true,
     },
 
-    numberPlate: {
+    rcNumber: {
       type: String,
       required: true,
       trim: true,
     },
 
-    vehicleName: {
+    numberPlate: {
       type: String,
       required: true,
       trim: true,

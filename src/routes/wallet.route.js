@@ -1,29 +1,43 @@
 import express from "express";
-import * as walletController from "../controllers/wallet.controller.js";
+
+import {
+  createRechargeOrder,
+  verifyRechargePayment,
+  markPaymentFailed,
+} from "../controllers/wallet.controller.js";
+
 import { authMiddleware, rateLimitMiddleware } from "../middlewares/index.js";
 
 const router = express.Router();
 
-// All wallet routes require authentication and rate limiting
-router.use(authMiddleware);
-router.use(rateLimitMiddleware);
-
 /**
  * 💰 CREATE RECHARGE ORDER
- * POST /api/wallet/recharge/create-order
  */
-router.post("/recharge/create-order", walletController.createRechargeOrderController);
+router.post(
+  "/recharge/create-order",
+  authMiddleware,
+  rateLimitMiddleware,
+  createRechargeOrder
+);
 
 /**
  * ✅ VERIFY PAYMENT (SUCCESS CALLBACK)
- * POST /api/wallet/recharge/verify
  */
-router.post("/recharge/verify", walletController.verifyRechargePaymentController);
+router.post(
+  "/recharge/verify",
+  authMiddleware,
+  rateLimitMiddleware,
+  verifyRechargePayment
+);
 
 /**
  * ❌ PAYMENT FAILED HANDLER
- * POST /api/wallet/recharge/fail
  */
-router.post("/recharge/fail", walletController.markPaymentFailedController);
+router.post(
+  "/recharge/fail",
+  authMiddleware,
+  rateLimitMiddleware,
+  markPaymentFailed
+);
 
 export default router;

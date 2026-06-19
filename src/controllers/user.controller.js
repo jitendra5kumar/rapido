@@ -24,3 +24,8 @@ export const changeUserRole = asyncHandler(async (req, res) => {
   response.success(res, 'User role updated successfully', updatedUser);
 });
 
+export const getallUsers = asyncHandler(async (req, res) => {
+  const users = await userService.getAllUsers();
+  response.success(res, 'Users fetched successfully', users);
+});
+

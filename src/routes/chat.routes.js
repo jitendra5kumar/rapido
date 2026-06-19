@@ -3,42 +3,45 @@ import * as chatController from "../controllers/chat.controller.js";
 import authMiddleware from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
-router.use(authMiddleware);
-// Start or get chat between driver and user
-router.post("/start",  chatController.startChat);
 
-// Get chat history
+router.use(authMiddleware);
+
+// Start Chat
+router.post(
+  "/start",
+  chatController.startChat
+);
+
+// Get Chat History
 router.get(
   "/:chatId/history",
-  
   chatController.getChatHistory
 );
 
-// Get all chats for a user
+// Get User Chats
 router.get(
   "/user/:userId",
-  
   chatController.getUserChats
 );
 
-// Mark messages as read
+router.post("/send", chatController.sendMessage);
+
+
+// Mark Messages Read
 router.put(
   "/:chatId/read",
-  
   chatController.markAsRead
 );
 
-// Close chat
+// Close Chat
 router.put(
   "/:chatId/close",
-  
   chatController.closeChat
 );
 
-// Get unread count
+// Get Unread Count
 router.get(
-  "/:userId/:role/unread",
-  
+  "/:userId/unread",
   chatController.getUnreadCount
 );
 

@@ -1,20 +1,60 @@
 import mongoose from "mongoose";
 
-const chatSchema = new mongoose.Schema(
+const messageSchema = new mongoose.Schema(
   {
-    driverId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Driver",
-      required: true,
-      index: true,
-    },
-
-    userId: {
+    senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
+
+    senderType: {
+      type: String,
+      enum: ["user", "driver", "admin"],
+      required: true,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+
+    readAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { _id: true }
+);
+
+const chatSchema = new mongoose.Schema(
+  {
+    participants: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        role: {
+          type: String,
+          enum: ["user", "driver", "admin"],
+          required: true,
+        },
+      },
+    ],
 
     rideId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -22,32 +62,7 @@ const chatSchema = new mongoose.Schema(
       default: null,
     },
 
-    messages: [
-      {
-        senderId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-        },
-        senderType: {
-          type: String,
-          enum: ["user", "driver"],
-          required: true,
-        },
-        message: {
-          type: String,
-          required: true,
-        },
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-        isRead: {
-          type: Boolean,
-          default: false,
-        },
-        readAt: Date,
-      },
-    ],
+    messages: [messageSchema],
 
     status: {
       type: String,
@@ -55,8 +70,16 @@ const chatSchema = new mongoose.Schema(
       default: "active",
     },
 
-    lastMessage: String,
-    lastMessageTime: Date,
+    lastMessage: {
+      type: String,
+      default: "",
+    },
+
+    lastMessageTime: {
+      type: Date,
+      default: null,
+    },
+
     unreadCount: {
       type: Number,
       default: 0,
@@ -67,9 +90,14 @@ const chatSchema = new mongoose.Schema(
   }
 );
 
-// Index for quick lookup
-chatSchema.index({ driverId: 1, userId: 1 }, { unique: true });
+// Find chats by participant
+chatSchema.index({ "participants.userId": 1 });
+
+// Find chats by ride
 chatSchema.index({ rideId: 1 });
+
+// Sort latest chats quickly
+chatSchema.index({ lastMessageTime: -1 });
 
 const Chat = mongoose.model("Chat", chatSchema);
 

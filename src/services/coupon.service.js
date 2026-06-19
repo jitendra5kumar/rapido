@@ -26,6 +26,9 @@ export const getCouponById = async (id) => {
 
 export const updateCoupon = async (id, data, userId) => {
   if (data.code) data.code = normalizeCode(data.code);
+
+  console.log(data);
+
   const coupon = await Coupon.findByIdAndUpdate(
     id,
     {

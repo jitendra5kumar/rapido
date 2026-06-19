@@ -1,17 +1,24 @@
 import City from '../models/city.model.js';
 
 export const createCity = async (userId, { name, image }) => {
-  // Check if city with same name already exists
-  const existingCity = await City.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+  const cityName = name.trim();
+
+  const existingCity = await City.findOne({
+    name: {
+      $regex: `^${cityName}$`,
+      $options: "i",
+    },
+  });
+
   if (existingCity) {
-    throw new Error('City with this name already exists');
+    throw new Error("City with this name already exists");
   }
 
-  const city = await new City({
-    name,
+  const city = await City.create({
+    name: cityName,
     image,
     createdBy: userId,
-  }).save();
+  });
 
   return city;
 };

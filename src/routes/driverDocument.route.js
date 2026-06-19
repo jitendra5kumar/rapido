@@ -2,11 +2,9 @@ import express from "express";
 import multer from "multer";
 
 import {
+  getAllDriverDocumentsController,
   updateDocumentStatusController,
   uploadDriverDocuments,
-  uploadDlDocument,
-  uploadAvatarController,
-  updateDlInfoController,
 } from "../controllers/driverDocument.controller.js";
 
 import authMiddleware, { requireRoles } from "../middlewares/auth.middleware.js";
@@ -43,32 +41,11 @@ router.post(
     { name: "aadhaar_front", maxCount: 1 },
     { name: "aadhaar_back", maxCount: 1 },
     { name: "pan", maxCount: 1 },
-    { name: "dl_front", maxCount: 1 },
-    { name: "dl_back", maxCount: 1 },
-    { name: "rc_front", maxCount: 1 },
-    { name: "rc_back", maxCount: 1 },
+    { name: "dl", maxCount: 1 },
+    { name: "rc", maxCount: 1 },
     { name: "insurance", maxCount: 1 },
   ]),
   uploadDriverDocuments
-);
-
-// 📤 Upload Driving License (DL) separately
-router.post(
-  "/upload-dl",
-  authMiddleware,
-  upload.fields([
-    { name: "dl_front", maxCount: 1 },
-    { name: "dl_back", maxCount: 1 },
-  ]),
-  uploadDlDocument
-);
-
-// 📤 Upload Profile Selfie / Avatar
-router.post(
-  "/upload-avatar",
-  // authMiddleware,
-  upload.single("avatar"),
-  uploadAvatarController
 );
 
 // 🔐 Approve / Reject Document Status (Admin only)
@@ -80,11 +57,6 @@ router.patch(
   updateDocumentStatusController
 );
 
-// ✏️ Update DL Info (license number / license type) — no image re-upload
-router.put(
-  "/update-dl-info",
-  authMiddleware,
-  updateDlInfoController
-);
+router.get('/all-docs',authMiddleware,rateLimitMiddleware,requireRoles('admin','sub_admin'),getAllDriverDocumentsController)
 
 export default router;

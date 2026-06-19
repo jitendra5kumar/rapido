@@ -1,8 +1,14 @@
 import express from "express";
 import multer from "multer";
 
-import * as driverVehicleController from "../controllers/driverVehicle.controller.js";
-import { authMiddleware, requireRoles, rateLimitMiddleware } from "../middlewares/index.js";
+import {
+  approveRejectVehicle,
+  getAllVehicleDocs,
+  uploadDriverVehicle,
+} from "../controllers/driverVehicle.controller.js";
+
+import authMiddleware, { requireRoles } from "../middlewares/auth.middleware.js";
+import { rateLimitMiddleware } from "../middlewares/index.js";
 
 const router = express.Router();
 
@@ -35,14 +41,7 @@ router.post(
   upload.fields([
     { name: "vehicleImages", maxCount: 6 },
   ]),
-  driverVehicleController.uploadDriverVehicleController
-);
-
-// 🚗 Get Vehicle (Driver)
-router.get(
-  "/my",
-  authMiddleware,
-  driverVehicleController.getDriverVehicleController
+  uploadDriverVehicle
 );
 
 // 🔐 Approve / Reject Vehicle (Admin only)
@@ -51,7 +50,9 @@ router.put(
   authMiddleware,
   rateLimitMiddleware,
   requireRoles('admin', 'sub_admin'),
-  driverVehicleController.approveRejectVehicleController
+  approveRejectVehicle
 );
+
+router.get("/all",authMiddleware,rateLimitMiddleware, requireRoles('admin', 'sub_admin'),getAllVehicleDocs)
 
 export default router;

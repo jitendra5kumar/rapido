@@ -6,7 +6,7 @@ const walletSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-  
+      unique: true, // 1 user = 1 wallet
       index: true
     },
 

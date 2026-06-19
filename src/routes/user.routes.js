@@ -10,6 +10,7 @@ const router = express.Router();
 router.get('/profile', authMiddleware, userController.getProfile);
 router.patch('/profile-update', authMiddleware, updateProfileValidator, handleValidationErrors, userController.updateProfile);
 router.patch('/role/:userId', authMiddleware, requireRoles('admin', 'sub_admin'), changeUserRoleValidator, handleValidationErrors, userController.changeUserRole);
+router.get('/all-users', authMiddleware, requireRoles('admin', 'sub_admin'), userController.getallUsers);
 
 
 

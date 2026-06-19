@@ -1,7 +1,6 @@
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
-import DriverDocument from '../models/driverDocument.model.js';
 import otpCache from '../cache/otp.cache.js';
 import sessionCache from '../cache/session.cache.js';
 import { jwt } from '../utils/index.js';
@@ -14,57 +13,47 @@ const generateReferralCode = () => {
 };
 
 
-export const sendOtp = async (phone, driver, channel = 'sms') => {
+export const sendOtp = async (phone) => {
   if (!phone) throw new Error('Phone number is required');
 
   // generate 4-digit OTP locally and store in Redis
- 
-  const otp = driver
-    ? Math.floor(100000 + Math.random() * 900000).toString()
-    : Math.floor(1000 + Math.random() * 9000).toString();
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
   await otpCache.setOtp(phone, otp);
 
   // keep minimal provider metadata (sessionId when available)
   let sessionId = null;
-  // try {
-  //   if (process.env.TWOFA_API_KEY) {
-  //     let formattedPhone = phone.trim();
-  //     if (!formattedPhone.startsWith('+')) {
-  //       formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
-  //     }
-  //     if (channel === 'whatsapp') {
-  //       // Simulating WhatsApp OTP send (e.g. 2factor whatsapp addon / mock logs)
-  //       console.log(`[WhatsApp API] Sending OTP ${otp} to ${formattedPhone} via WhatsApp`);
-  //     } else {
-  //       const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
-  //       const template = process.env.TWOFA_TEMPLATE || 'OTP1';
-  //       const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;
-  //       const response = await axios.get(url);
-  //       console.log('2factor response:', response.data);
-  //       if (response.data?.Status === 'Success') {
-  //         sessionId = response.data.Details;
-  //       }
-  //     }
-  //   }
-  // } catch (err) {
-  //   // ignore remote send errors — OTP is still stored locally for verification
-  //   console.error('2factor send warning:', err.message);
-  // }
+  try {
+    if (process.env.TWOFA_API_KEY) {
+      let formattedPhone = phone.trim();
+      if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+91' + formattedPhone.replace(/^\+/, '');
+      }
+      const mode = process.env.TWOFA_MODE || 'AUTOGEN2';
+      const template = process.env.TWOFA_TEMPLATE || 'OTP1';
+const url = `https://2factor.in/API/V1/${process.env.TWOFA_API_KEY}/SMS/${formattedPhone}/${otp}/${template}`;      const response = await axios.get(url);
+      console.log('2factor response:', response.data);
+      if (response.data?.Status === 'Success') {
+        sessionId = response.data.Details;
+      }
+    }
+  } catch (err) {
+    // ignore remote send errors — OTP is still stored locally for verification
+    console.error('2factor send warning:', err.message);
+  }
 
   await otpCache.setData(phone, {
     phone,
     provider: 'twofactor',
     sessionId,
-    channel,
   });
 
-  console.log(`OTP (${channel}) for ${phone}: ${otp}`);
+  console.log(`OTP for ${phone}: ${otp}`);
 
   return {
     success: true,
     provider: 'twofactor',
     sessionId,
-    message: `OTP generated and stored for ${channel}`,
+    message: 'OTP generated and stored',
   };
 };
 
@@ -82,13 +71,9 @@ export const verifyOtp = async (phone, otp) => {
 
   const user = await User.findOne({ phone });
   const isVerified = user ? Boolean(user.is_verified) : false;
-
-
   const result = { phone, otpVerified: true, is_verified: isVerified };
- let isSignup = false;
 
-
-  if (user) {
+  if (user && isVerified) {
     const token = jwt.generateToken({
       id: user._id,
       phone: user.phone,
@@ -97,42 +82,8 @@ export const verifyOtp = async (phone, otp) => {
 
     await sessionCache.setSession(user._id.toString(), token);
     result.token = token;
-
-    const driverDoc = await DriverDocument.findOne({ user_id: user._id });
-    const dlUploaded = Boolean(
-      driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url,
-    );
-    const profileSetupComplete = Boolean(
-      user.name && user.gender && user.profile_image_id,
-    );
-
-    const vehicleUploaded = Boolean(user.driver_id);
-
-    result.driver = {
-      id: user._id.toString(),
-      name: user.name || "",
-      phone: user.phone,
-      email: user.email,
-      gender: user.gender,
-      dob: user.dob,
-      profile_image_id: user.profile_image_id,
-      isVerified: isVerified,
-      isOnline: false,
-      rating: 5.0,
-      totalTrips: 0,
-      role: user.role,
-      documents: {
-        dlUploaded,
-        profileSetupComplete,
-        vehicleUploaded,
-        isVerified,
-      },
-    };
-  } else {
-    isSignup = true;
   }
 
-  result.isSignup = isSignup;
   return result;
 };
 
@@ -140,8 +91,7 @@ export const completeProfile = async (
   phone,
   name,
   gender,
-  referralCode = null,
-  device = null
+  referralCode = null
 ) => {
   const isVerified = await otpCache.isOtpVerified(phone);
   // if (!isVerified) {
@@ -152,27 +102,17 @@ export const completeProfile = async (
 
   let user = await User.findOne({ phone });
   const update = {};
-  const pin = Math.floor(1000 + Math.random() * 9000).toString();
-  
+
   if (user) {
     if (!user.name && name) update.name = name;
     if (!user.gender && gender) update.gender = gender;
-    if (device) update.device = device;
 
     if (referralCode) {
-      const referrer = await User.findOne({ referral_code: referralCode.trim() });
-      if (!referrer) {
-        throw new Error('Invalid referral code');
+      const existingCode = await User.findOne({ referral_code: referralCode });
+      if (existingCode && existingCode._id.toString() !== user._id.toString()) {
+        throw new Error('Referral code already in use');
       }
-      if (referrer._id.toString() === user._id.toString()) {
-        throw new Error('Cannot use your own referral code');
-      }
-      if (!user.referred_by_id) {
-        update.referred_by_id = referrer._id;
-        referrer.totalReferrals = (referrer.totalReferrals || 0) + 1;
-        referrer.referralEarnings = (referrer.referralEarnings || 0) + 50;
-        await referrer.save();
-      }
+      if (!user.referral_code) update.referral_code = referralCode;
     }
 
     if (Object.keys(update).length) {
@@ -180,28 +120,20 @@ export const completeProfile = async (
       user = await User.findById(user._id);
     }
   } else {
-    let uniqueReferralCode = generateReferralCode();
+    let uniqueReferralCode = referralCode;
     let isUnique = false;
 
     while (!isUnique) {
+      if (!uniqueReferralCode) {
+        uniqueReferralCode = generateReferralCode();
+      }
+
       const exists = await User.findOne({ referral_code: uniqueReferralCode });
       if (!exists) {
         isUnique = true;
       } else {
-        uniqueReferralCode = generateReferralCode();
+        uniqueReferralCode = null;
       }
-    }
-
-    let referredById = null;
-    if (referralCode) {
-      const referrer = await User.findOne({ referral_code: referralCode.trim() });
-      if (!referrer) {
-        throw new Error('Invalid referral code');
-      }
-      referredById = referrer._id;
-      referrer.totalReferrals = (referrer.totalReferrals || 0) + 1;
-      referrer.referralEarnings = (referrer.referralEarnings || 0) + 50;
-      await referrer.save();
     }
 
     user = await new User({
@@ -210,10 +142,7 @@ export const completeProfile = async (
       gender,
       role: 'rider',
       referral_code: uniqueReferralCode,
-      referred_by_id: referredById,
       is_verified: true,
-      pin,
-      device,
     }).save();
   }
 
@@ -304,34 +233,50 @@ export const adminRegister = async ({ email, password, name, phone }) => {
 
 export const adminLogin = async ({ email, password }) => {
   if (!email || !password) {
-    throw new Error('Email and password are required');
+    throw new Error("Email and password are required");
   }
 
   const normalizedEmail = email.trim().toLowerCase();
 
   const user = await User.findOne({
     email: normalizedEmail,
-    role: 'admin',
+    role: "admin",
   });
 
   if (!user) {
-    throw new Error('Invalid credentials');
+    throw new Error("Invalid credentials");
   }
 
-  const isMatch = await bcrypt.compare(password, user.password || '');
+  const isMatch = await bcrypt.compare(
+    password,
+    user.password || ""
+  );
 
   if (!isMatch) {
-    throw new Error('Invalid credentials');
+    throw new Error("Invalid credentials");
   }
 
-  const token = jwt.generateToken({
-    id: user._id,
+  const payload = {
+    id: user._id.toString(),
     phone: user.phone,
     email: user.email,
     role: user.role,
-  });
+  };
 
-  await sessionCache.setSession(user._id.toString(), token);
+  const token = jwt.generateToken(payload);
+
+  console.log("Generated Token:", token);
+
+  await sessionCache.setSession(
+    user._id.toString(),
+    token
+  );
+
+  const savedToken = await sessionCache.getSession(
+    user._id.toString()
+  );
+
+  console.log("Saved Token:", savedToken);
 
   return {
     token,

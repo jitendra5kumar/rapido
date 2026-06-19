@@ -310,3 +310,38 @@ export const sendNotificationByRole = async (
     throw err;
   }
 };
+
+
+export const getAllNotificationsService = async ({
+  page = 1,
+  limit = 10,
+  role,
+}) => {
+  const query = {};
+
+  if (role) {
+    query.role = role;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [notifications, total] = await Promise.all([
+    Notification.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+
+    Notification.countDocuments(query),
+  ]);
+
+  return {
+    notifications,
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};

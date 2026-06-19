@@ -1,6 +1,6 @@
 import express from "express";
 
-import { sendRoleNotification } from "../controllers/notification.controller.js";
+import { getAllNotifications, sendRoleNotification } from "../controllers/notification.controller.js";
 import authMiddleware, { requireRoles } from "../middlewares/auth.middleware.js";
 import { rateLimitMiddleware } from "../middlewares/index.js";
 
@@ -14,5 +14,8 @@ router.post(
   requireRoles('admin', 'sub_admin'),
   sendRoleNotification
 );
+
+router.get("/notifications",authMiddleware,getAllNotifications );
+
 
 export default router;

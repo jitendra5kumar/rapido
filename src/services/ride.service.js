@@ -21,70 +21,6 @@ export const RIDE_STATUS = {
 
 export const createRide =
   async (data) => {
-    // Normalize stops provided in various formats into GeoJSON Points
-    const normalizeStops = (input) => {
-      const out = [];
-      if (!input) return out;
-
-      const pushItem = (item) => {
-        if (!item) return;
-        // latitude/longitude or lat/lng
-        const lat = item.latitude ?? item.lat;
-        const lng = item.longitude ?? item.lng ?? item.long;
-
-        if (lat !== undefined && lng !== undefined) {
-          out.push({
-            type: 'Point',
-            coordinates: [Number(lng), Number(lat)],
-            address: item.address || '',
-            title: item.title || '',
-          });
-          return;
-        }
-
-        // Already GeoJSON-like
-        if (item.type === 'Point' && Array.isArray(item.coordinates)) {
-          out.push({
-            type: 'Point',
-            coordinates: item.coordinates,
-            address: item.address || '',
-            title: item.title || '',
-          });
-        }
-      };
-
-      if (Array.isArray(input)) {
-        input.forEach(pushItem);
-        return out;
-      }
-
-      if (typeof input === 'object') {
-        // numeric-keyed object like {0: {...}, 1: {...}}
-        const keys = Object.keys(input);
-        const numericKeys = keys.filter(k => /^\d+$/.test(k));
-        if (numericKeys.length) {
-          numericKeys.sort((a,b)=>Number(a)-Number(b)).forEach(k => pushItem(input[k]));
-          return out;
-        }
-
-        // single stop object
-        pushItem(input);
-        return out;
-      }
-
-      return out;
-    };
-
-    const stopsArray = normalizeStops(data.stops ?? data.stop ?? null);
-    // also allow top-level latitude/longitude/title as a single stop
-    if ((!stopsArray || stopsArray.length === 0) && data.latitude !== undefined && data.longitude !== undefined) {
-      stopsArray.push({
-        type: 'Point',
-        coordinates: [Number(data.longitude), Number(data.latitude)],
-        address: data.address || '',
-        title: data.title || '',
-      });
-    }
 
     const ride =
       await Ride.create({
@@ -125,8 +61,6 @@ export const createRide =
             data.dropLocation
               .title,
         },
-        // Stops (if any) normalized into GeoJSON Points
-        stops: stopsArray,
 
         status:
           RIDE_STATUS.SEARCHING,
@@ -141,8 +75,9 @@ export const createRide =
               ?.status ||
             'pending',
 
-          fare: Number(
-            data.fare || 0
+          baseFare: Number(
+            data.payment
+              ?.fare || 0
           ),
 
           tax: Number(
@@ -166,18 +101,10 @@ export const createRide =
           ),
 
           totalFare: Number(
-            data?.totalFare || 0
+            data.payment
+              ?.totalFare || 0
           ),
         },
-
-        // optional estimated metrics provided when booking
-        distanceMeters: Number(
-          data.distanceMeters || 0
-        ),
-
-        durationMinutes: Number(
-          data.durationMinutes || 0
-        ),
 
         requestedAt:
           new Date(),
@@ -206,37 +133,22 @@ export const getRides =
         filters.status;
     }
 
-    const limit =
-      filters.limit &&
-      Number.isFinite(Number(filters.limit))
-        ? Number(filters.limit)
-        : null;
+    return await Ride.find(query)
 
-    const queryBuilder = Ride.find(query)
-      .populate({
-        path: "userId",
-        select: "name phone driver_id",
-        populate: {
-          path: "driver_id",
-          select: "numberPlate vehicleName",
-        },
-      })
-      .populate("driverId", "name phone")
+      .populate(
+        'userId',
+        'name phone'
+      )
+
+      .populate(
+        'driverId',
+        'name phone'
+      )
+
       .sort({
         createdAt: -1,
       })
-      .limit(Number(limit))
-      .lean();
 
-    return await queryBuilder;
-  };
-
-
-
-  export const getRecentUserRides = async ({ userId, limit = 10 }) => {
-    return await Ride.find({ userId }, "pickupLocation dropLocation stops distanceMeters durationMinutes")
-      .sort({ createdAt: -1 })
-      .limit(Number(limit))
       .lean();
   };
 
@@ -244,20 +156,13 @@ export const getRideById =
   async (id) => {
 
     return await Ride.findById(id)
-      .populate({
-        path: "userId",
-        select: "name phone driver_id",
-        populate: {
-          path: "driver_id",
-          select: "numberPlate vehicleName",
-        },
-      })
+
+      .populate("userId", "name phone")
+
       .populate("driverId", "name phone")
-      .populate("vehicleId", "name vehicleImage")
-      .lean();
+      .populate("vehicleId", "name vehicleImage");
   };
 
-;
 export const updateRide =
   async (id, data) => {
 
@@ -390,7 +295,6 @@ export const arriveRide =
   async ({
     rideId,
     driverId,
-    otp,
   }) => {
     const ride = await Ride.findOne({
       _id: rideId,
@@ -411,7 +315,6 @@ export const arriveRide =
         $set: {
           status: RIDE_STATUS.ARRIVED,
           arrivedAt: new Date(),
-          otp,
         },
       },
       {
@@ -440,9 +343,8 @@ export const startRide =
     }
 
     if (
-      ride.status !== RIDE_STATUS.ACCEPTED &&
-      ride.status !== 'arrived' &&
-      ride.status !== 'driver_arrived'
+      ride.status !==
+      RIDE_STATUS.ACCEPTED
     ) {
       throw new Error(
         'Ride cannot start'
@@ -460,10 +362,9 @@ export const startRide =
       );
     }
 
-    const userOtp = user.otp || user.pin;
     if (
       !otp ||
-      (userOtp !== otp && otp !== '1234')
+      user.otp !== otp
     ) {
       throw new Error(
         'Invalid OTP'
@@ -647,22 +548,3 @@ export const cancelRide =
 
     return updatedRide;
   };
-
-export const getActiveDriverRide = async (driverId) => {
-  return await Ride.findOne({
-    driverId,
-    status: { $in: ['accepted', 'arrived', 'ongoing'] },
-  })
-    .populate({
-      path: 'userId',
-      select: 'name phone driver_id',
-      populate: {
-        path: 'driver_id',
-        select: 'numberPlate vehicleName',
-      },
-    })
-    .populate('driverId', 'name phone')
-    .populate('vehicleId', 'name vehicleImage')
-    .sort({ createdAt: -1 })
-    .lean();
-};

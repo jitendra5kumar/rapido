@@ -8,7 +8,7 @@ export const createDriverReportController = asyncHandler(async (req, res) => {
     ...req.body,
     reporterId: userId,
   };
-console.log(data);
+
   const report = await driverReportService.createDriverReport(data);
 
   response.success(res, "Driver report submitted successfully", report, 201);

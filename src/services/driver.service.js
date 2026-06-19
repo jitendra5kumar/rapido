@@ -1,11 +1,10 @@
 import crypto from "crypto";
 import User from "../models/user.model.js";
-import DriverDocument from "../models/driverDocument.model.js";
 import bcrypt from "bcryptjs";
 import { jwt } from "../utils/index.js";
 import otpCache from "../cache/otp.cache.js";
 import sessionCache from "../cache/session.cache.js";
-import City from "../models/city.model.js";
+
 // 🎯 referral code generator
 const generateReferralCode = () => {
     return crypto.randomBytes(4).toString("hex").toUpperCase();
@@ -19,8 +18,7 @@ export const sendOtp = async (
     name,
     password,
     email = null,
-    referral_code = null,
-    device = null
+    referral_code = null
 ) => {
 
     if (!phone) {
@@ -75,7 +73,6 @@ export const sendOtp = async (
             password,
             email,
             referred_by_id: subAdmin._id,
-            device,
         },
         300
     );
@@ -150,7 +147,6 @@ export const verifyOtp = async (phone, otp) => {
             referral_code, // driver's own code
 
             referred_by_id: userData.referred_by_id, // linked sub admin
-            device: userData.device || null,
         });
     }
 
@@ -187,11 +183,9 @@ export const createDriverService = async (payload) => {
     const {
         name,
         phone,
+        password,
         email,
-        city,
-        dob,
-        gender,
-        device,
+        referral_code,
     } = payload;
 
     // ✅ check existing
@@ -203,6 +197,7 @@ export const createDriverService = async (payload) => {
     });
 
     if (existing) {
+
         if (existing.phone === phone) {
             throw new Error("Phone already exists");
         }
@@ -212,22 +207,12 @@ export const createDriverService = async (payload) => {
         }
     }
 
- const cityData = await City.findById(city)
-   .populate("createdBy", "referral_code name phone")
-   .lean();
-
-    if (!cityData) {
-        throw new Error("Invalid city");
+    // ✅ validate sub admin code
+    if (!referral_code) {
+        throw new Error("Sub admin referral code is required");
     }
-    console.log("cityData",cityData);
 
-    let referral_code = cityData?.createdBy.referral_code||null;
-
-
-let subAdmin = null;
-  if (referral_code) {
-
-       subAdmin = await User.findOne({
+    const subAdmin = await User.findOne({
         referral_code,
         role: "sub_admin",
     });
@@ -235,14 +220,18 @@ let subAdmin = null;
     if (!subAdmin) {
         throw new Error("Invalid sub admin referral code");
     }
-}
+
+    // ✅ hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // ✅ generate unique driver referral code
     let driverReferralCode;
     let isUnique = false;
 
     while (!isUnique) {
+
         driverReferralCode = generateReferralCode();
+
         const exists = await User.findOne({
             referral_code: driverReferralCode,
         });
@@ -256,27 +245,17 @@ let subAdmin = null;
     const driver = await User.create({
         name,
         phone,
-        // email,
+        email,
+        password: hashedPassword,
+
         role: "driver",
+
         referral_code: driverReferralCode,
-        referred_by_id: subAdmin?._id||null,
-        city,
-        dob,
-        gender,
-        device,
+
+        referred_by_id: subAdmin._id,
     });
-  const result = { phone, otpVerified: true, is_verified: false };
 
-     const token = jwt.generateToken({
-       id: driver._id,
-       phone: driver.phone,
-       role: driver.role,
-     });
-    
-        await sessionCache.setSession(driver._id.toString(), token);
-        result.token = token;
-
-    return result;
+    return driver;
 };
 
 // ==============================
@@ -323,62 +302,41 @@ export const loginDriverService = async ({
 // GET PROFILE
 // ==============================
 export const getProfileService = async (userId) => {
+
     const user = await User.findById(userId)
         .populate("profile_image_id")
-        .populate("referred_by_id")
-        .populate({
-            path: "driver_id",
-            populate: [
-                { path: "serviceId" },
-                { path: "vehicleTypeId" }
-            ]
-        });
+        .populate("service_id service_category_id")
+        .populate("referred_by_id");
 
     if (!user) {
         throw new Error("User not found");
     }
 
-    const driverDoc = await DriverDocument.findOne({ user_id: userId });
-    const userObj = user.toObject();
-    
-    // Check if driving license is uploaded
-    const dlUploaded = Boolean(driverDoc?.dl?.front?.url && driverDoc?.dl?.back?.url);
-    const profileSetupComplete = Boolean(user.name && user.gender && user.profile_image_id);
-    const vehicleUploaded = Boolean(user.driver_id);
-    const rcUploaded = Boolean(driverDoc?.rc?.front?.url && driverDoc?.rc?.front?.number);
-    const aadhaarPanUploaded = Boolean(driverDoc?.aadhaar?.front?.url || driverDoc?.pan?.url);
-
-    userObj.documents = {
-      dlUploaded,
-      profileSetupComplete,
-      vehicleUploaded,
-      rcUploaded,
-      aadhaarPanUploaded,
-      isVerified: Boolean(user.is_verified),
-    };
-
-    userObj.driverDocument = driverDoc;
-
-    // Keep top-level compatibility
-    userObj.isVerified = Boolean(user.is_verified);
-
-    return userObj;
+    return user;
 };
 
 // ==============================
 // UPDATE PROFILE
 // ==============================
-export const updateProfileService = async (userId, updates) => {
-  let user = await User.findById(userId);
+export const updateProfileService = async (
+    userId,
+    updates
+) => {
 
-  if (user) {
-    Object.assign(user, updates);
-    await user.save();
+    console.log(userId,updates)
+
+    delete updates.password;
+    delete updates.role;
+
+    const user = await User.findByIdAndUpdate(
+        userId,
+        updates,
+        {
+            new: true,
+        }
+    );
+
     return user;
-  }
-
-  user = await User.create(updates);
-  return user;
 };
 
 // ==============================
@@ -389,7 +347,7 @@ export const logoutService = async (userId) => {
     await User.findByIdAndUpdate(userId, {
         fcm_token: null,
         remember_token: null,
-     
+        is_online: false,
     });
 
     return true;

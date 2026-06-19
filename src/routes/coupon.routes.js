@@ -10,8 +10,8 @@ router.use(authMiddleware);
 
 router.post("/", requireRoles("admin", "sub_admin"), createCouponValidator, handleValidationErrors, couponController.createCouponController);
 router.get("/", requireRoles("admin", "sub_admin"), couponController.getCouponsController);
-router.get("/:id", requireRoles("admin", "sub_admin"), getCouponValidator, handleValidationErrors, couponController.getCouponByIdController);
 router.put("/:id", requireRoles("admin", "sub_admin"), updateCouponValidator, handleValidationErrors, couponController.updateCouponController);
+router.get("/:id", requireRoles("admin", "sub_admin"), getCouponValidator, handleValidationErrors, couponController.getCouponByIdController);
 router.delete("/:id", requireRoles("admin", "sub_admin"), getCouponValidator, handleValidationErrors, couponController.deleteCouponController);
 router.post("/apply", applyCouponValidator, handleValidationErrors, couponController.applyCouponController);
 

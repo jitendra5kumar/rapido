@@ -1,9 +1,8 @@
 // controllers/notification.controller.js
 
-import { sendNotificationByRole } from "../services/notification.service.js";
-import { asyncHandler } from "../utils/index.js";
+import { getAllNotificationsService, sendNotificationByRole } from "../services/notification.service.js";
 
-export const sendRoleNotification = asyncHandler(async (req, res) => {
+export const sendRoleNotification = async (req, res) => {
   try {
     const { role, title, body } = req.body;
 
@@ -20,4 +19,33 @@ export const sendRoleNotification = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
+
+export const getAllNotifications = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      role,
+    } = req.query;
+
+    const data = await getAllNotificationsService({
+      page: Number(page),
+      limit: Number(limit),
+      role,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notifications fetched successfully",
+      ...data,
+    });
+  } catch (error) {
+    console.error("Get notifications error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};

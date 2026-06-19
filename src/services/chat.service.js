@@ -1,36 +1,37 @@
 import Chat from "../models/chat.model.js";
-import User from "../models/user.model.js";
-import Driver from "../models/driver.model.js";
-import redis from "../cache/redisClient.js";
 
-export const getOrCreateChat = async (driverId, userId) => {
+export const getOrCreateChat = async (
+  senderId,
+  senderRole,
+  receiverId,
+  receiverRole
+) => {
   try {
-    const participantKey = `chat:participant:${driverId}:${userId}`;
-    let chatId = await redis.get(participantKey);
+    let chat = await Chat.findOne({
+      participants: {
+        $all: [
+          { $elemMatch: { userId: senderId } },
+          { $elemMatch: { userId: receiverId } },
+        ],
+      },
+    });
 
-    if (!chatId) {
-      chatId = await redis.incr('chat:id:next');
-      const metaKey = `chat:meta:${chatId}`;
-      const now = Date.now();
-      await redis.hmset(metaKey, {
-        id: chatId,
-        driverId,
-        userId,
-        status: 'open',
-        createdAt: now,
-        lastMessageTime: now,
-        lastMessage: '',
-        rideId: '',
+    if (!chat) {
+      chat = await Chat.create({
+        participants: [
+          {
+            userId: senderId,
+            role: senderRole,
+          },
+          {
+            userId: receiverId,
+            role: receiverRole,
+          },
+        ],
       });
-      await redis.set(participantKey, chatId);
-      await redis.zadd(`user:chats:${userId}`, now, chatId);
-      await redis.zadd(`driver:chats:${driverId}`, now, chatId);
-      await redis.expire(metaKey, 60 * 60);
-      await redis.expire(`chat:messages:${chatId}`, 60 * 60);
     }
 
-    const meta = await redis.hgetall(`chat:meta:${chatId}`);
-    return { ...meta, id: chatId };
+    return chat;
   } catch (error) {
     throw new Error(`Failed to get or create chat: ${error.message}`);
   }
@@ -44,132 +45,183 @@ export const saveMessage = async (
   rideId = null
 ) => {
   try {
-    const msg = {
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      throw new Error("Chat not found");
+    }
+
+    chat.messages.push({
       senderId,
       senderType,
       message,
-      timestamp: Date.now(),
-      isRead: false,
-    };
+      timestamp: new Date(),
+    });
 
-    const messagesKey = `chat:messages:${chatId}`;
-    await redis.rpush(messagesKey, JSON.stringify(msg));
+    chat.lastMessage = message;
+    chat.lastMessageTime = new Date();
+    chat.unreadCount += 1;
 
-    const metaKey = `chat:meta:${chatId}`;
-    const now = Date.now();
-    await redis.hset(metaKey, 'lastMessage', message, 'lastMessageTime', now);
-
-    if (rideId) await redis.hset(metaKey, 'rideId', rideId);
-
-    try {
-      const meta = await redis.hgetall(metaKey);
-      if (meta.userId) await redis.zadd(`user:chats:${meta.userId}`, now, chatId);
-      if (meta.driverId) await redis.zadd(`driver:chats:${meta.driverId}`, now, chatId);
-    } catch (e) {
-      console.error('Redis update sorted sets error (saveMessage):', e.message);
+    if (rideId && !chat.rideId) {
+      chat.rideId = rideId;
     }
 
-    try {
-      await redis.expire(metaKey, 60 * 60);
-      await redis.expire(messagesKey, 60 * 60);
-    } catch (e) {
-      console.error('Redis expire error (saveMessage):', e.message);
-    }
+    await chat.save();
 
-    const meta = await redis.hgetall(metaKey);
-    return { ...meta, id: chatId };
+    return chat;
   } catch (error) {
     throw new Error(`Failed to save message: ${error.message}`);
   }
 };
 
-export const getChatHistory = async (chatId, page = 1, limit = 50) => {
+export const getChatHistory = async (
+  chatId,
+  page = 1,
+  limit = 50
+) => {
   try {
-    const messagesKey = `chat:messages:${chatId}`;
-    const totalMessages = await redis.llen(messagesKey);
-    if (totalMessages === 0) {
-      const meta = await redis.hgetall(`chat:meta:${chatId}`);
-      if (!meta || Object.keys(meta).length === 0) throw new Error('Chat not found');
-      return {
-        chat: { ...meta, messages: [] },
-        pagination: { page, limit, total: 0 },
-      };
+    const chat = await Chat.findById(chatId)
+      .populate("participants.userId", "name email phone role")
+      .lean();
+
+    if (!chat) {
+      throw new Error("Chat not found");
     }
 
-    const startIndex = Math.max(0, totalMessages - page * limit);
-    const endIndex = Math.max(0, totalMessages - (page - 1) * limit) - 1;
+    const totalMessages = chat.messages.length;
 
-    const msgs = await redis.lrange(messagesKey, startIndex, endIndex);
-    const messages = msgs.map((m) => JSON.parse(m)).reverse();
+    const startIndex = Math.max(
+      0,
+      totalMessages - page * limit
+    );
 
-    const meta = await redis.hgetall(`chat:meta:${chatId}`);
+    const endIndex = Math.max(
+      0,
+      totalMessages - (page - 1) * limit
+    );
+
+    const messages = chat.messages
+      .slice(startIndex, endIndex)
+      .reverse();
 
     return {
-      chat: { ...meta, messages },
-      pagination: { page, limit, total: totalMessages },
+      chat: {
+        ...chat,
+        messages,
+      },
+      pagination: {
+        page,
+        limit,
+        total: totalMessages,
+        totalPages: Math.ceil(totalMessages / limit),
+      },
     };
   } catch (error) {
-    throw new Error(`Failed to get chat history: ${error.message}`);
+    throw new Error(
+      `Failed to get chat history: ${error.message}`
+    );
   }
 };
 
-export const markMessagesAsRead = async (chatId, userId) => {
+export const markMessagesAsRead = async (
+  chatId,
+  userId
+) => {
   try {
-    const messagesKey = `chat:messages:${chatId}`;
-    const msgs = await redis.lrange(messagesKey, 0, -1);
-    if (!msgs || msgs.length === 0) return null;
-    const updated = msgs.map((m) => {
-      const obj = JSON.parse(m);
-      if (obj.senderId !== userId && !obj.isRead) {
-        obj.isRead = true;
-        obj.readAt = Date.now();
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      throw new Error("Chat not found");
+    }
+
+    let updated = false;
+
+    chat.messages.forEach((msg) => {
+      if (
+        msg.senderId.toString() !== userId &&
+        !msg.isRead
+      ) {
+        msg.isRead = true;
+        msg.readAt = new Date();
+        updated = true;
       }
-      return JSON.stringify(obj);
     });
 
-    const multi = redis.multi();
-    multi.del(messagesKey);
-    if (updated.length) multi.rpush(messagesKey, ...updated);
-    await multi.exec();
-
-    try {
-      await redis.hset(`chat:meta:${chatId}`, 'unreadCount', 0);
-      await redis.expire(`chat:meta:${chatId}`, 60 * 60);
-      await redis.expire(messagesKey, 60 * 60);
-    } catch (e) {
-      console.error('Redis meta update error (markMessagesAsRead):', e.message);
+    if (updated) {
+      chat.unreadCount = 0;
+      await chat.save();
     }
 
-    const meta = await redis.hgetall(`chat:meta:${chatId}`);
-    return { ...meta, id: chatId };
+    return chat;
   } catch (error) {
-    throw new Error(`Failed to mark messages as read: ${error.message}`);
+    throw new Error(
+      `Failed to mark messages as read: ${error.message}`
+    );
   }
 };
 
-export const getUserChats = async (userId, role) => {
+export const getUserChats = async (userId) => {
   try {
-    const zkey = role === 'driver' ? `driver:chats:${userId}` : `user:chats:${userId}`;
-    const chatIds = await redis.zrevrange(zkey, 0, -1);
-    const chats = [];
-    for (const id of chatIds) {
-      const meta = await redis.hgetall(`chat:meta:${id}`);
-      chats.push({ ...meta, id });
-    }
+    const chats = await Chat.find({
+      "participants.userId": userId,
+    })
+      .populate(
+        "participants.userId",
+        "name email phone role"
+      )
+      .sort({ lastMessageTime: -1 })
+      .lean();
 
     return chats;
   } catch (error) {
-    throw new Error(`Failed to get user chats: ${error.message}`);
+    throw new Error(
+      `Failed to get user chats: ${error.message}`
+    );
   }
 };
 
 export const closeChat = async (chatId) => {
   try {
-    const metaKey = `chat:meta:${chatId}`;
-    await redis.hset(metaKey, 'status', 'closed');
-    await redis.expire(metaKey, 60 * 60);
-    return await redis.hgetall(metaKey);
+    const chat = await Chat.findByIdAndUpdate(
+      chatId,
+      {
+        status: "closed",
+      },
+      {
+        new: true,
+      }
+    );
+
+    return chat;
   } catch (error) {
-    throw new Error(`Failed to close chat: ${error.message}`);
+    throw new Error(
+      `Failed to close chat: ${error.message}`
+    );
   }
+};
+
+export const sendMessage = async (
+  chatId,
+  senderId,
+  senderRole,
+  message
+) => {
+  const chat = await Chat.findByIdAndUpdate(
+    chatId,
+    {
+      $push: {
+        messages: {
+          senderId,
+          senderRole,
+          message,
+          timestamp: new Date(),
+        },
+      },
+      lastMessage: message,
+      lastMessageTime: new Date(),
+    },
+    { new: true }
+  );
+
+  return chat;
 };

@@ -1,7 +1,6 @@
 import * as adminChatService from "../services/adminChat.service.js";
-import { asyncHandler } from "../utils/index.js";
 
-export const startAdminChat = asyncHandler(async (req, res) => {
+export const startAdminChat = async (req, res) => {
   try {
     const { adminId, subAdminId } = req.body;
     const currentUserId = req.user?._id;
@@ -37,9 +36,9 @@ export const startAdminChat = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
 
-export const getAdminChatHistory = asyncHandler(async (req, res) => {
+export const getAdminChatHistory = async (req, res) => {
   try {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -61,9 +60,9 @@ export const getAdminChatHistory = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
 
-export const getMyAdminChats = asyncHandler(async (req, res) => {
+export const getMyAdminChats = async (req, res) => {
   try {
     const userId = req.user?._id;
 
@@ -87,9 +86,9 @@ export const getMyAdminChats = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
 
-export const markAdminMessagesAsRead = asyncHandler(async (req, res) => {
+export const markAdminMessagesAsRead = async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user?._id;
@@ -114,9 +113,9 @@ export const markAdminMessagesAsRead = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
 
-export const archiveAdminChat = asyncHandler(async (req, res) => {
+export const archiveAdminChat = async (req, res) => {
   try {
     const { chatId } = req.params;
 
@@ -133,9 +132,9 @@ export const archiveAdminChat = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};
 
-export const getAdminUnreadCount = asyncHandler(async (req, res) => {
+export const getAdminUnreadCount = async (req, res) => {
   try {
     const userId = req.user?._id;
 
@@ -159,4 +158,4 @@ export const getAdminUnreadCount = asyncHandler(async (req, res) => {
       message: error.message,
     });
   }
-});
+};

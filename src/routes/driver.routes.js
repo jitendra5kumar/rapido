@@ -14,7 +14,7 @@ import rateLimitMiddleware from "../middlewares/rateLimit.middleware.js";
 import { handleValidationErrors } from "../middlewares/error.middleware.js";
 
 // ✅ validators (MISSING FIX)
-import {sendOtp as sendOtpValidator, verifyOtp2 as verifyOtpValidator, login as loginValidator, register as registerValidator } from '../validators/auth.validator.js';
+import {sendOtp as sendOtpValidator, verifyOtp as verifyOtpValidator, login as loginValidator, register as registerValidator } from '../validators/auth.validator.js';
 
 
 const router = express.Router();
@@ -66,12 +66,6 @@ router.get(
 router.put(
   "/update-profile",
   authMiddleware,   // ✅ FIXED SECURITY
-  updateProfile
-);
-
-router.put(
-  "/updateProfile",
-  authMiddleware,
   updateProfile
 );
 
